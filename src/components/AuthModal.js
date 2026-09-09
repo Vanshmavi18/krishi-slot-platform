@@ -124,7 +124,7 @@ export class AuthModal {
       const res = await this.api.sendEmailOtp(email);
       this.isLoading = false;
       this.isRealEmail = Boolean(res.isRealEmail);
-      this.demoOtp = res.demoOtp || '';
+      this.demoOtp = null;
       this.step = 'otp';
       this.successMessage = res.message || `Verification code sent to ${email}`;
       this.render();
@@ -263,18 +263,15 @@ export class AuthModal {
     const savedBuyer = this.api.getSavedCredential('buyer');
     const savedAdmin = this.api.getSavedCredential('admin');
 
-    // Default identifiers for the active tab
+    // Identifiers for the active tab (no hardcoded passwords)
     let defaultIdent = '';
     let defaultPwd = '';
     if (this.activeTab === 'farmer') {
-      defaultIdent = savedFarmer?.email || savedFarmer?.identifier || this.currentEmail || 'ramesh.farmer@krishislot.in';
-      defaultPwd = savedFarmer?.password || 'farmer123';
+      defaultIdent = savedFarmer?.email || savedFarmer?.identifier || this.currentEmail || '';
     } else if (this.activeTab === 'admin') {
-      defaultIdent = savedAdmin?.identifier || 'admin@krishislot.in';
-      defaultPwd = savedAdmin?.password || 'admin123';
+      defaultIdent = savedAdmin?.identifier || '';
     } else {
-      defaultIdent = savedBuyer?.identifier || 'buyer@agrocorp.in';
-      defaultPwd = savedBuyer?.password || 'buyer123';
+      defaultIdent = savedBuyer?.identifier || '';
     }
 
     container.innerHTML = `
@@ -373,8 +370,8 @@ export class AuthModal {
                       id="auth-email-input" 
                       name="email"
                       type="email" 
-                      value="${this.currentEmail || 'ramesh.farmer@krishislot.in'}" 
-                      placeholder="Enter your email (e.g. name@gmail.com)" 
+                      value="${this.currentEmail || ''}" 
+                      placeholder="Enter your Gmail address (e.g. name@gmail.com)" 
                       autocomplete="email"
                       required
                     />
@@ -382,9 +379,7 @@ export class AuthModal {
                 </div>
 
                 <div class="auth-info-note">
-                  ${this.emailConfig?.configured 
-                    ? `📬 <b>Live Gmail Gateway:</b> A real 6-digit OTP will be dispatched straight to this email inbox!` 
-                    : `💡 <b>Instant Demo Mode:</b> Enter any email (e.g. <code>${this.currentEmail || 'ramesh.farmer@krishislot.in'}</code>) for immediate testing.`}
+                  📬 <b>Real Gmail Delivery:</b> A 6-digit verification code will be sent to your Gmail inbox.
                 </div>
 
                 <button id="btn-submit-email" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
@@ -408,48 +403,29 @@ export class AuthModal {
                     id="auth-otp-input" 
                     name="otp"
                     type="text" 
-                    placeholder="${this.demoOtp || '123456'}" 
+                    placeholder="Enter 6-digit OTP from Gmail" 
                     maxlength="6" 
                     class="auth-otp-field"
                     autocomplete="one-time-code"
                     autofocus
+                    required
                   />
                 </div>
 
-                ${this.isRealEmail ? `
-                  <div class="auth-real-gmail-banner" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 14px;margin-bottom:14px">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-                      <span style="font-size:22px">📬</span>
-                      <div>
-                        <b style="color:#166534;font-size:13px">Real Gmail OTP Sent!</b>
-                        <div style="font-size:12px;color:#15803d">
-                          Sent to <b>${this.currentEmail}</b>
-                        </div>
-                      </div>
-                    </div>
-                    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:7px 10px;font-size:11.5px;color:#92400e;line-height:1.4;margin-bottom:8px">
-                      ⚠️ <b>Check SPAM / JUNK Folder:</b> Google often moves emails from automated services into your <u>Spam / Junk</u> folder or Promotions tab.
-                    </div>
-                    ${this.demoOtp ? `
-                      <div style="display:flex;align-items:center;justify-content:space-between;background:#ffffff;border:1px dashed #86efac;padding:8px 10px;border-radius:8px">
-                        <span style="font-size:11.5px;color:#475563">Didn't find in inbox?</span>
-                        <button type="button" id="btn-autofill-otp" class="btn-outline btn-sm auth-autofill-btn" style="padding:4px 10px;font-size:11.5px">
-                          ⚡ Auto-fill Code (${this.demoOtp})
-                        </button>
-                      </div>
-                    ` : ''}
-                  </div>
-                ` : (this.demoOtp ? `
-                  <div class="auth-demo-otp-banner">
+                <div class="auth-real-gmail-banner" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px;margin-bottom:16px">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                    <span style="font-size:22px">📬</span>
                     <div>
-                      <span style="font-size:11px;color:#065f46;display:block">Received Email OTP:</span>
-                      <strong style="font-size:18px;letter-spacing:0.15em;color:#047857">${this.demoOtp}</strong>
+                      <b style="color:#166534;font-size:13.5px">Real Gmail OTP Sent!</b>
+                      <div style="font-size:12px;color:#15803d">
+                        Sent to your inbox: <b>${this.currentEmail}</b>
+                      </div>
                     </div>
-                    <button type="button" id="btn-autofill-otp" class="btn-outline btn-sm auth-autofill-btn">
-                      ⚡ Auto-fill Code
-                    </button>
                   </div>
-                ` : '')}
+                  <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:12px;color:#92400e;line-height:1.4">
+                    ⚠️ <b>Check SPAM / JUNK Folder:</b> Google often filters automated emails into your <u>Spam / Junk</u> folder or Promotions tab. Please check there if not in Primary inbox!
+                  </div>
+                </div>
 
                 <!-- Optional Save Password -->
                 <div class="auth-save-box">
@@ -533,7 +509,7 @@ export class AuthModal {
                     id="auth-pwd-input" 
                     name="password"
                     type="${this.showLoginPwd ? 'text' : 'password'}" 
-                    value="${defaultPwd}" 
+                    value="" 
                     placeholder="Enter your password" 
                     autocomplete="current-password"
                     required
@@ -549,10 +525,6 @@ export class AuthModal {
                   <input id="auth-remember-password-checkbox" type="checkbox" checked />
                   <span>Remember me on this device</span>
                 </label>
-              </div>
-
-              <div class="auth-info-note">
-                🔑 <b>Demo Credentials:</b> <code>${defaultIdent}</code> / Password: <code>${defaultPwd}</code>
               </div>
 
               <button id="btn-submit-pwd-login" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
@@ -596,7 +568,7 @@ export class AuthModal {
     document.getElementById('tab-farmer')?.addEventListener('click', () => {
       this.activeTab = 'farmer';
       this.step = 'email';
-      this.currentEmail = this.farmerSaved?.email || 'ramesh.farmer@krishislot.in';
+      this.currentEmail = this.farmerSaved?.email || '';
       this.error = null;
       this.successMessage = null;
       this.render();
@@ -605,7 +577,7 @@ export class AuthModal {
     document.getElementById('tab-admin')?.addEventListener('click', () => {
       this.activeTab = 'admin';
       this.step = 'email';
-      this.currentEmail = this.adminSaved?.identifier || 'admin@krishislot.in';
+      this.currentEmail = this.adminSaved?.identifier || '';
       this.authMode = 'password';
       this.error = null;
       this.successMessage = null;
@@ -615,7 +587,7 @@ export class AuthModal {
     document.getElementById('tab-buyer')?.addEventListener('click', () => {
       this.activeTab = 'buyer';
       this.step = 'email';
-      this.currentEmail = this.buyerSaved?.identifier || 'buyer@agrocorp.in';
+      this.currentEmail = this.buyerSaved?.identifier || '';
       this.authMode = 'password';
       this.error = null;
       this.successMessage = null;
@@ -690,15 +662,6 @@ export class AuthModal {
       this.handlePasswordLogin();
     });
     document.getElementById('btn-submit-pwd-login')?.addEventListener('click', () => this.handlePasswordLogin());
-
-    // Auto-fill OTP
-    document.getElementById('btn-autofill-otp')?.addEventListener('click', () => {
-      const otpInp = document.getElementById('auth-otp-input');
-      if (otpInp && this.demoOtp) {
-        otpInp.value = this.demoOtp;
-        otpInp.focus();
-      }
-    });
 
     // Back to change email
     document.getElementById('btn-back-email')?.addEventListener('click', () => {
