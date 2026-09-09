@@ -26,8 +26,8 @@ export function getEmailGatewayConfig() {
       user: gmailUser,
       pass: gmailPass,
       host: 'smtp.gmail.com',
-      port: 465,
-      secure: true
+      port: 587,
+      secure: false
     };
   }
 
@@ -70,10 +70,15 @@ function getTransporter() {
   try {
     if (config.type === 'GMAIL') {
       transporterInstance = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
         auth: {
           user: config.user,
           pass: config.pass
+        },
+        tls: {
+          rejectUnauthorized: false
         }
       });
     } else {
@@ -84,12 +89,15 @@ function getTransporter() {
         auth: {
           user: config.user,
           pass: config.pass
+        },
+        tls: {
+          rejectUnauthorized: false
         }
       });
     }
 
     lastConfigHash = configHash;
-    console.log(`[EMAIL GATEWAY] Connected to ${config.type} SMTP transport (${config.user})`);
+    console.log(`[EMAIL GATEWAY] Connected to ${config.type} SMTP transport (${config.user}) via Port 587 STARTTLS`);
     return transporterInstance;
   } catch (err) {
     console.error('[EMAIL GATEWAY ERROR] Failed to initialize transporter:', err.message);
