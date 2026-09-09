@@ -7,7 +7,10 @@ export function renderSidebar({ currentView, user, t }) {
   const isBuyer = role === 'buyer';
 
   return `
-    <aside class="app-sidebar">
+    <!-- Mobile Drawer Backdrop -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
+
+    <aside id="app-sidebar" class="app-sidebar">
       <div>
         <div class="sidebar-brand">
           <div class="brand-wrapper">
@@ -19,6 +22,8 @@ export function renderSidebar({ currentView, user, t }) {
               </div>
             </div>
           </div>
+          <!-- Close button inside mobile drawer -->
+          <button id="btn-close-sidebar" class="sidebar-close-btn" aria-label="Close navigation drawer">✕</button>
         </div>
 
         <!-- FARMER PORTAL LINKS -->
@@ -110,5 +115,69 @@ export function renderSidebar({ currentView, user, t }) {
         </div>
       </div>
     </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile primary navigation">
+      ${isFarmer ? `
+        <button class="bottom-nav-item ${currentView === 'dashboard' ? 'active' : ''}" data-view="dashboard">
+          <span class="bottom-nav-icon">📊</span>
+          <span class="bottom-nav-label">Dashboard</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'booking' ? 'active' : ''}" data-view="booking">
+          <span class="bottom-nav-icon">📅</span>
+          <span class="bottom-nav-label">Book Slot</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'queue' ? 'active' : ''}" data-view="queue">
+          <span class="bottom-nav-icon">⏱️</span>
+          <span class="bottom-nav-label">Live Queue</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'procurements' ? 'active' : ''}" data-view="procurements">
+          <span class="bottom-nav-icon">🌾</span>
+          <span class="bottom-nav-label">J-Forms</span>
+        </button>
+        <button class="bottom-nav-item" data-view="notifications">
+          <span class="bottom-nav-icon">🔔</span>
+          <span class="bottom-nav-label">Alerts</span>
+        </button>
+      ` : isAdmin ? `
+        <button class="bottom-nav-item ${currentView === 'centre' ? 'active' : ''}" data-view="centre">
+          <span class="bottom-nav-icon">🏢</span>
+          <span class="bottom-nav-label">Mandi Hub</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'queue' ? 'active' : ''}" data-view="queue">
+          <span class="bottom-nav-icon">⏱️</span>
+          <span class="bottom-nav-label">Live Queue</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'procurements' ? 'active' : ''}" data-view="procurements">
+          <span class="bottom-nav-icon">📜</span>
+          <span class="bottom-nav-label">Assays & DBT</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'buyer' ? 'active' : ''}" data-view="buyer">
+          <span class="bottom-nav-icon">🛒</span>
+          <span class="bottom-nav-label">Marketplace</span>
+        </button>
+        <button class="bottom-nav-item" data-view="notifications">
+          <span class="bottom-nav-icon">🔔</span>
+          <span class="bottom-nav-label">Alerts</span>
+        </button>
+      ` : `
+        <button class="bottom-nav-item ${currentView === 'buyer' ? 'active' : ''}" data-view="buyer">
+          <span class="bottom-nav-icon">🛒</span>
+          <span class="bottom-nav-label">Arrival Lots</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'queue' ? 'active' : ''}" data-view="queue">
+          <span class="bottom-nav-icon">⏱️</span>
+          <span class="bottom-nav-label">Gate Inward</span>
+        </button>
+        <button class="bottom-nav-item ${currentView === 'centre' ? 'active' : ''}" data-view="centre">
+          <span class="bottom-nav-icon">🏢</span>
+          <span class="bottom-nav-label">Weighbridge</span>
+        </button>
+        <button class="bottom-nav-item" data-view="notifications">
+          <span class="bottom-nav-icon">🔔</span>
+          <span class="bottom-nav-label">Alerts</span>
+        </button>
+      `}
+    </nav>
   `;
 }

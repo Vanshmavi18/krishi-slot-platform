@@ -116,21 +116,95 @@ class ApiService {
     this.listeners.notification.push(fn);
   }
 
-  // Auth
-  async sendOtp(phone) {
-    return this.fetch('/api/auth/send-otp', {
+  // --- EMAIL AUTHENTICATION ---
+  async sendEmailOtp(email) {
+    return this.fetch('/api/auth/send-email-otp', {
       method: 'POST',
-      body: JSON.stringify({ phone })
+      body: JSON.stringify({ email })
     });
   }
 
-  async verifyOtp(phone, otp) {
-    const data = await this.fetch('/api/auth/verify-otp', {
+  async verifyEmailOtp(email, otp, savePassword = null) {
+    const data = await this.fetch('/api/auth/verify-email-otp', {
       method: 'POST',
-      body: JSON.stringify({ phone, otp })
+      body: JSON.stringify({ email, otp, savePassword })
     });
     this.setSession(data.token, data.user);
     return data;
+  }
+
+  async loginWithEmailPassword(email, password) {
+    const data = await this.fetch('/api/auth/login-email-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+    this.setSession(data.token, data.user);
+    return data;
+  }
+
+  async checkEmail(email) {
+    return this.fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
+  }
+
+  async saveEmailPassword(email, password) {
+    return this.fetch('/api/auth/save-email-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, password })
+    });
+  }
+
+  async getEmailStatus() {
+    return this.fetch('/api/auth/email-status');
+  }
+
+  // --- LEGACY ADAPTERS (FOR BACKWARD COMPATIBILITY) ---
+  async sendOtp(phoneOrEmail) {
+    return this.fetch('/api/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ [String(phoneOrEmail).includes('@') ? 'email' : 'phone']: phoneOrEmail })
+    });
+  }
+
+  async verifyOtp(phoneOrEmail, otp, savePassword = null) {
+    const isEmail = String(phoneOrEmail).includes('@');
+    const data = await this.fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ [isEmail ? 'email' : 'phone']: phoneOrEmail, otp, savePassword })
+    });
+    this.setSession(data.token, data.user);
+    return data;
+  }
+
+  async loginWithMobilePassword(phoneOrEmail, password) {
+    const isEmail = String(phoneOrEmail).includes('@');
+    const data = await this.fetch('/api/auth/login-mobile-password', {
+      method: 'POST',
+      body: JSON.stringify({ [isEmail ? 'email' : 'phone']: phoneOrEmail, password })
+    });
+    this.setSession(data.token, data.user);
+    return data;
+  }
+
+  // Saved credentials persistence in localStorage
+  getSavedCredential(role = 'farmer') {
+    try {
+      const raw = localStorage.getItem(`krishi_saved_cred_${role}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  setSavedCredential(role, creds) {
+    try {
+      if (creds) {
+        localStorage.setItem(`krishi_saved_cred_${role}`, JSON.stringify(creds));
+      } else {
+        localStorage.removeItem(`krishi_saved_cred_${role}`);
+      }
+    } catch (e) {
+      console.warn('Could not persist credentials:', e);
+    }
   }
 
   async loginStaff(staffId, password) {

@@ -16,51 +16,65 @@ export function renderTopbar({ user, language, t, unreadSmsCount = 0, unreadNoti
   return `
     <header class="app-topbar">
       <div class="topbar-left">
-        <span class="pulse-dot"></span>
+        <!-- Mobile Drawer Hamburger Button -->
+        <button id="btn-mobile-menu" class="mobile-hamburger-btn" aria-label="Toggle navigation menu">
+          <span>☰</span>
+        </button>
+
+        <div class="topbar-brand-mobile">
+          <span class="topbar-brand-icon">🌱</span>
+          <span class="topbar-brand-text">KrishiSlot</span>
+        </div>
+
         <div class="topbar-greeting">
-          <span>🏛️ APMC Mandi Network</span>
-          <strong>Jaitpur Centre • Uttar Pradesh</strong>
+          <span class="pulse-dot"></span>
+          <div class="topbar-greeting-text">
+            <span class="mandi-network-title">🏛️ APMC Mandi Network</span>
+            <strong>Jaitpur Centre • Uttar Pradesh</strong>
+          </div>
         </div>
       </div>
 
       <div class="topbar-right">
         <!-- Language Switcher -->
-        <button id="btn-toggle-lang" class="lang-toggle">
-          🌐 ${language === 'en' ? 'हिन्दी (Hindi)' : 'English'}
+        <button id="btn-toggle-lang" class="lang-toggle" title="Switch Language">
+          🌐 <span class="lang-text">${language === 'en' ? 'हिन्दी' : 'English'}</span>
         </button>
 
         <!-- 3-Role Fast Switcher -->
-        <select id="quick-role-switch" class="btn-outline role-select-dropdown" style="padding:6px 12px;font-weight:700">
-          <option value="farmer" ${currentRole === 'farmer' ? 'selected' : ''}>🌾 Farmer: Ramesh Kumar</option>
-          <option value="admin" ${currentRole === 'admin' || currentRole === 'officer' ? 'selected' : ''}>🛡️ Admin: Dr. Alok Nath</option>
-          <option value="buyer" ${currentRole === 'buyer' ? 'selected' : ''}>🛒 Buyer: Vikram Singhania</option>
+        <select id="quick-role-switch" class="btn-outline role-select-dropdown" aria-label="Switch User Role">
+          <option value="farmer" ${currentRole === 'farmer' ? 'selected' : ''}>🌾 Ramesh (Farmer)</option>
+          <option value="admin" ${currentRole === 'admin' || currentRole === 'officer' ? 'selected' : ''}>🛡️ Dr. Alok (Admin)</option>
+          <option value="buyer" ${currentRole === 'buyer' ? 'selected' : ''}>🛒 Vikram (Buyer)</option>
         </select>
 
-        <!-- Notification Bell (NEW!) -->
-        <button id="btn-topbar-notif" class="icon-btn notif-bell-btn" title="Open Notifications Center" aria-label="Notifications">
+        <!-- Notification Bell -->
+        <button id="btn-topbar-notif" class="icon-btn notif-bell-btn" title="Open Notifications" aria-label="Notifications">
           <span>🔔</span>
           ${unreadNotifCount > 0 ? `<span class="icon-badge notif-badge">${unreadNotifCount}</span>` : ''}
         </button>
 
         <!-- SMS Alert Mobile Hub -->
-        <button id="btn-topbar-sms" class="icon-btn" title="Open Mobile SMS Hub">
+        <button id="btn-topbar-sms" class="icon-btn" title="Open Mandi SMS Hub" aria-label="Mandi SMS Alerts">
           <span>📱</span>
           ${unreadSmsCount > 0 ? `<span class="icon-badge"></span>` : ''}
         </button>
 
         <!-- User Profile Pill -->
-        <div class="user-pill-container" style="display:flex;align-items:center;gap:10px">
+        <div class="user-pill-container" title="${user?.email || user?.name || 'User'}">
           <div class="user-avatar">${avatarIcon}</div>
-          <div style="font-size:13px;line-height:1.2">
-            <b>${user?.name || 'Ramesh Kumar'}</b>
-            <div class="role-badge ${currentRole}" style="padding:2px 8px;font-size:10px;margin-top:2px">
+          <div class="user-info-text">
+            <b class="user-name">${user?.name || 'Ramesh Kumar'}</b>
+            <div class="role-badge ${currentRole}">
               ${roleLabel}
             </div>
           </div>
         </div>
 
-        <button id="btn-logout" class="btn-outline btn-sm" style="color:#b91c1c;border-color:#fca5a5">
-          ${t.nav.logout}
+        <!-- Logout Button -->
+        <button id="btn-logout" class="btn-outline btn-sm btn-logout" title="Log Out">
+          <span>🚪</span>
+          <span class="logout-text">${t.nav.logout}</span>
         </button>
       </div>
     </header>

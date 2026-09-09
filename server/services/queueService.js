@@ -109,9 +109,13 @@ export async function advanceQueue({ centreId = 'CTR-UP-01', counterId = 2, cust
   // Emit SSE event
   queueEvents.emit('queue_updated', getQueueStatus(centreId));
 
+  const updatedQueue = getQueueStatus(centreId);
+
   return {
     success: true,
+    token: nextToken,
     nowServingToken: nextToken,
+    queue: updatedQueue,
     farmerName,
     counterId,
     proximityAlertSentTo: upcomingFarmer ? upcomingFarmer.farmerName : null

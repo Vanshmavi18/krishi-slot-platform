@@ -18,22 +18,20 @@ import { ReceiptModal } from './components/ReceiptModal.js';
 
 class KrishiSlotApp {
   constructor() {
-    this.user = api.currentUser || {
-      id: 'FRM-UP-26032',
-      name: 'Ramesh Kumar',
-      phone: '9876543210',
-      role: 'farmer',
-      village: 'Jaitpur, Gorakhpur'
-    };
+    this.user = api.currentUser || null;
     
     // Set initial view based on role
-    const initialRole = (this.user?.role || 'farmer').toLowerCase();
-    if (initialRole === 'buyer') {
-      this.currentView = 'buyer';
-    } else if (initialRole === 'admin' || initialRole === 'officer') {
-      this.currentView = 'centre';
+    if (!this.user) {
+      this.currentView = 'landing';
     } else {
-      this.currentView = this.user ? 'dashboard' : 'landing';
+      const initialRole = (this.user?.role || 'farmer').toLowerCase();
+      if (initialRole === 'buyer') {
+        this.currentView = 'buyer';
+      } else if (initialRole === 'admin' || initialRole === 'officer') {
+        this.currentView = 'centre';
+      } else {
+        this.currentView = 'dashboard';
+      }
     }
 
     this.language = localStorage.getItem('krishi_lang') || 'en';
@@ -50,6 +48,7 @@ class KrishiSlotApp {
     this.centres = [];
     this.crops = [];
     this.availableSlots = [];
+    this.myBookings = [];
     this.procurements = [];
     this.stats = null;
     this.queueStatus = null;
@@ -154,14 +153,16 @@ class KrishiSlotApp {
       const queueRes = await api.getQueueStatus(this.bookingState.centreId);
       this.queueStatus = queueRes.queue;
 
-      // Fetch farmer procurements & stats
+      // Fetch farmer procurements, stats & bookings
       if (this.user) {
-        const [procRes, statsRes] = await Promise.all([
+        const [procRes, statsRes, bookingsRes] = await Promise.all([
           api.getProcurements(this.user.id),
-          api.getProcurementStats(this.user.id)
+          api.getProcurementStats(this.user.id),
+          api.getMyBookings(this.user.id)
         ]);
         this.procurements = procRes.procurements || [];
         this.stats = statsRes.stats;
+        this.myBookings = bookingsRes.bookings || [];
 
         // Fetch notifications
         const notifRes = await api.getNotifications(this.user.id, this.user.role);
@@ -170,6 +171,10 @@ class KrishiSlotApp {
           this.unreadNotifCount = notifRes.unreadCount || 0;
           this.notificationCenter.setNotifications(this.notifications, this.unreadNotifCount);
         }
+      } else {
+        this.procurements = [];
+        this.stats = null;
+        this.myBookings = [];
       }
 
       // Fetch centre tokens
@@ -253,6 +258,7 @@ class KrishiSlotApp {
         farmerId: this.user?.id || 'FRM-UP-26032',
         farmerName: this.user?.name || 'Ramesh Kumar',
         farmerPhone: this.user?.phone || '9876543210',
+        farmerEmail: this.user?.email || null,
         centreId: this.bookingState.centreId,
         cropId: this.bookingState.cropId,
         quantity: Number(this.bookingState.quantity) || 42,
@@ -261,7 +267,7 @@ class KrishiSlotApp {
         timeSlot: this.bookingState.timeSlot
       });
 
-      this.showToast(`🎉 Slot Confirmed! Token #${res.booking.token} dispatched to your SMS & notifications!`);
+      this.showToast(`🎉 Slot Confirmed! Gate Token #${res.booking.token} dispatched via SMS & Email!`);
       await this.refreshData();
       this.currentView = 'dashboard';
       this.render();
@@ -290,6 +296,7 @@ class KrishiSlotApp {
 
     try {
       const res = await api.createProcurement({
+        token: token ? token.trim() : null,
         farmerId: this.user?.id || 'FRM-UP-26032',
         bookingId: null,
         cropId,
@@ -300,12 +307,23 @@ class KrishiSlotApp {
         officerName: this.user?.name || 'V. K. Verma'
       });
 
-      this.showToast(`⚖️ Weighment Recorded & Official J-Form ${res.procurement.id} Issued! SMS & Notification sent.`);
+      this.showToast(`⚖️ Weighment Recorded & Official J-Form #${res.procurement.id} Issued! SMS & Email sent.`);
       await this.refreshData();
       this.receiptModal.open(res.procurement);
       this.render();
     } catch (err) {
       this.showToast(`Weighment error: ${err.message}`);
+    }
+  }
+
+  async handleApprovePayment(receiptId) {
+    try {
+      const res = await api.approvePayment(receiptId);
+      this.showToast(`💰 DBT Payment for J-Form #${receiptId} Cleared! UTR: ${res.procurement.utr}`);
+      await this.refreshData();
+      this.render();
+    } catch (err) {
+      this.showToast(`DBT approval error: ${err.message}`);
     }
   }
 
@@ -441,17 +459,36 @@ class KrishiSlotApp {
     document.getElementById('btn-topbar-notif')?.addEventListener('click', () => this.notificationCenter.toggle());
     document.getElementById('sidebar-notif-btn')?.addEventListener('click', () => this.notificationCenter.toggle(true));
     document.getElementById('quick-role-switch')?.addEventListener('change', (e) => this.switchRole(e.target.value));
+
+    // Mobile Drawer Navigation Toggles
+    const closeMobileDrawer = () => {
+      document.getElementById('app-sidebar')?.classList.remove('mobile-open');
+      document.getElementById('sidebar-backdrop')?.classList.remove('active');
+    };
+
+    document.getElementById('btn-mobile-menu')?.addEventListener('click', () => {
+      document.getElementById('app-sidebar')?.classList.toggle('mobile-open');
+      document.getElementById('sidebar-backdrop')?.classList.toggle('active');
+    });
+
+    document.getElementById('btn-close-sidebar')?.addEventListener('click', closeMobileDrawer);
+    document.getElementById('sidebar-backdrop')?.addEventListener('click', closeMobileDrawer);
     
     document.getElementById('btn-logout')?.addEventListener('click', () => {
       api.setSession(null, null);
       this.user = null;
       this.currentView = 'landing';
+      this.myBookings = [];
+      this.procurements = [];
+      this.stats = null;
+      this.showToast('You have been logged out successfully.');
       this.render();
     });
 
     // Sidebar navigation
     document.querySelectorAll('.nav-link').forEach(link => {
       link.addEventListener('click', () => {
+        closeMobileDrawer();
         const view = link.getAttribute('data-view');
         if (view === 'sms') {
           this.virtualPhone.toggle(true);
@@ -464,7 +501,25 @@ class KrishiSlotApp {
       });
     });
 
+    // Mobile Bottom Navigation Bar
+    document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        closeMobileDrawer();
+        const view = btn.getAttribute('data-view');
+        if (view === 'notifications') {
+          this.notificationCenter.toggle(true);
+        } else if (view) {
+          this.currentView = view;
+          this.render();
+        }
+      });
+    });
+
     // Dashboard shortcuts
+    document.getElementById('dash-hero-book-btn')?.addEventListener('click', () => {
+      this.currentView = 'booking';
+      this.render();
+    });
     document.getElementById('dash-open-queue')?.addEventListener('click', () => {
       this.currentView = 'queue';
       this.render();
@@ -551,6 +606,15 @@ class KrishiSlotApp {
       });
     });
 
+    document.querySelectorAll('.btn-approve-pay').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        if (id) {
+          this.handleApprovePayment(id);
+        }
+      });
+    });
+
     // Mandi Centre Officer Actions
     document.getElementById('btn-centre-advance')?.addEventListener('click', () => {
       this.handleAdvanceQueue();
@@ -603,6 +667,27 @@ class KrishiSlotApp {
 
     document.getElementById('btn-submit-weighment')?.addEventListener('click', () => {
       this.handleWeighmentSubmission();
+    });
+
+    document.querySelectorAll('.btn-select-arrival, .arrival-row').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const row = el.closest('.arrival-row') || el;
+        const tok = row.getAttribute('data-token');
+        const crop = row.getAttribute('data-crop');
+        const qty = parseFloat(row.getAttribute('data-qty')) || 42;
+        if (tok) {
+          const tokInp = document.getElementById('weigh-token-input');
+          const cropSel = document.getElementById('weigh-crop-select');
+          const grossInp = document.getElementById('weigh-gross-input');
+          const tareInp = document.getElementById('weigh-tare-input');
+          if (tokInp) tokInp.value = tok;
+          if (cropSel && crop) cropSel.value = crop;
+          if (grossInp) grossInp.value = (qty + 2.5).toFixed(1);
+          if (tareInp) tareInp.value = '2.5';
+          grossInp?.dispatchEvent(new Event('input'));
+          this.showToast(`Selected arrival Token #${tok} (${qty} qtl) for weighment entry.`);
+        }
+      });
     });
 
     // Buyer Portal Events
@@ -672,11 +757,14 @@ class KrishiSlotApp {
     let contentHtml = '';
 
     switch (this.currentView) {
-      case 'dashboard':
+      case 'dashboard': {
+        const latestBooking = (this.myBookings || []).find(b => b.status === 'CONFIRMED' || b.queueStatus === 'WAITING') || this.myBookings[0] || null;
         contentHtml = renderFarmerDashboard({
           user: this.user,
           stats: this.stats,
-          latestBooking: this.centreTokens[0] || null,
+          latestBooking,
+          myBookings: this.myBookings,
+          procurements: this.procurements,
           queueStatus: this.queueStatus,
           t,
           onNavigate: (view) => {
@@ -685,6 +773,7 @@ class KrishiSlotApp {
           }
         });
         break;
+      }
 
       case 'booking':
         contentHtml = renderSlotBooking({
@@ -696,13 +785,15 @@ class KrishiSlotApp {
         });
         break;
 
-      case 'queue':
+      case 'queue': {
+        const activeBooking = (this.myBookings || []).find(b => b.status === 'CONFIRMED' || b.queueStatus === 'WAITING') || this.myBookings[0] || null;
         contentHtml = renderLiveQueue({
           queueStatus: this.queueStatus,
-          userToken: 'A-047',
+          userToken: activeBooking ? activeBooking.token : null,
           t
         });
         break;
+      }
 
       case 'procurements':
         contentHtml = renderProcurements({
@@ -711,14 +802,26 @@ class KrishiSlotApp {
         });
         break;
 
-      case 'centre':
+      case 'centre': {
+        const todayBookings = this.centreTokens.length || 64;
+        const waitingNow = this.centreTokens.filter(t => t.queueStatus === 'WAITING' || t.status === 'CONFIRMED' || !t.status).length || 19;
+        const completedToday = this.centreTokens.filter(t => t.status === 'COMPLETED').length || 42;
         contentHtml = renderCentreOperations({
-          stats: { metrics: { todayBookings: 64, dailyCapacity: 90, waitingNow: 19, completedToday: 42, nowServing: this.queueStatus?.nowServingToken || 'A-038' } },
+          stats: {
+            metrics: {
+              todayBookings,
+              dailyCapacity: 90,
+              waitingNow,
+              completedToday,
+              nowServing: this.queueStatus?.nowServingToken || 'A-038'
+            }
+          },
           tokens: this.centreTokens,
           crops: this.crops,
           t
         });
         break;
+      }
 
       case 'buyer':
         contentHtml = renderBuyerDashboard({

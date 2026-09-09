@@ -123,15 +123,27 @@ export function renderCentreOperations({ stats, tokens, crops, t }) {
                   <th>Farmer</th>
                   <th>Time Slot</th>
                   <th>Crop</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                ${tokenList.map(item => `
+                ${tokenList.length === 0 ? `
                   <tr>
-                    <td><b>#${item.token}</b></td>
-                    <td>${item.farmerName}</td>
+                    <td colspan="5" style="text-align:center;padding:24px;color:#9ca3af">
+                      No booked arrivals scheduled for this centre yet.
+                    </td>
+                  </tr>
+                ` : tokenList.map(item => `
+                  <tr class="arrival-row" style="cursor:pointer" data-token="${item.token}" data-crop="${item.cropId || 'paddy_comm'}" data-qty="${item.quantity || 42}">
+                    <td><b style="color:#15803d">#${item.token}</b></td>
+                    <td><b>${item.farmerName}</b></td>
                     <td>${item.timeSlot}</td>
-                    <td>${item.cropName || 'Paddy'}</td>
+                    <td>${item.cropName || 'Paddy'} (${item.quantity || 40} qtl)</td>
+                    <td>
+                      <button class="btn-outline btn-sm btn-select-arrival" data-token="${item.token}" data-crop="${item.cropId || 'paddy_comm'}" data-qty="${item.quantity || 42}">
+                        Weigh ⚖️
+                      </button>
+                    </td>
                   </tr>
                 `).join('')}
               </tbody>

@@ -46,19 +46,63 @@ export async function sendSms({ phone, recipientName = 'किसान मि�
     gateway: process.env.SMS_GATEWAY_TYPE || 'VIRTUAL_SIMULATOR'
   };
 
-  // 1. External Gateway webhook / API if configured
-  if (process.env.SMS_GATEWAY_TYPE === 'fast2sms' && process.env.FAST2SMS_API_KEY) {
+  // 1. External Gateway Fast2SMS (Real SMS to Indian Mobile Numbers)
+  const fast2SmsKey = process.env.FAST2SMS_API_KEY;
+  if (fast2SmsKey) {
     try {
-      // Outbound call to fast2sms API
-      /*
-      await fetch('https://www.fast2sms.com/dev/bulkV2', {
-        method: 'POST',
-        headers: { authorization: process.env.FAST2SMS_API_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ route: 'v3', sender_id: 'TXTIND', message: messageText, numbers: cleanPhone })
-      });
-      */
+      if (type === 'OTP' && data?.otp) {
+        // High priority OTP Route via Fast2SMS
+        const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+          method: 'POST',
+          headers: {
+            'authorization': fast2SmsKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            route: 'otp',
+            variables_values: String(data.otp),
+            numbers: cleanPhone
+          })
+        });
+
+        const result = await response.json();
+        console.log(`[FAST2SMS OTP GATEWAY] -> Phone: +91 ${cleanPhone} | Response:`, result);
+
+        if (result && result.return) {
+          smsRecord.gateway = 'FAST2SMS_REAL';
+          smsRecord.status = 'SENT';
+          smsRecord.gatewayRequestId = result.request_id;
+        } else {
+          console.warn(`[FAST2SMS ERROR]`, result?.message);
+          smsRecord.gatewayError = Array.isArray(result?.message) ? result.message.join(', ') : result?.message;
+        }
+      } else {
+        // Quick SMS Route for alerts and confirmations
+        const response = await fetch('https://www.fast2sms.com/dev/bulkV2', {
+          method: 'POST',
+          headers: {
+            'authorization': fast2SmsKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            route: 'q',
+            message: messageText,
+            language: 'english',
+            flash: 0,
+            numbers: cleanPhone
+          })
+        });
+
+        const result = await response.json();
+        console.log(`[FAST2SMS QUICK ALERT] -> Phone: +91 ${cleanPhone} | Response:`, result);
+        if (result && result.return) {
+          smsRecord.gateway = 'FAST2SMS_REAL';
+          smsRecord.status = 'SENT';
+        }
+      }
     } catch (err) {
-      console.warn('External SMS Gateway error (fallback to virtual):', err.message);
+      console.warn('Fast2SMS gateway network error:', err.message);
+      smsRecord.gatewayError = err.message;
     }
   }
 

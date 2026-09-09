@@ -5,121 +5,246 @@ export class AuthModal {
     this.api = api;
     this.onLoginSuccess = onLoginSuccess;
     this.activeTab = 'farmer'; // 'farmer' | 'admin' | 'buyer'
-    this.step = 'phone'; // 'phone' or 'otp' for farmer
-    this.currentPhone = '';
+    this.authMode = 'otp'; // 'otp' | 'password'
+    this.step = 'email'; // 'email' | 'otp'
+    this.currentEmail = 'ramesh.farmer@krishislot.in';
     this.demoOtp = '';
     this.error = null;
+    this.successMessage = null;
+    this.isLoading = false;
+    this.isRealEmail = false;
+    this.emailConfig = null;
+
+    // Password visibility toggles
+    this.showLoginPwd = false;
+    this.showSavePwd = false;
+    this.showAdminPwd = false;
+    this.showBuyerPwd = false;
+
+    // Countdown timer for OTP
+    this.countdownSeconds = 0;
+    this.timerInterval = null;
+
+    // Saved credentials in localStorage
+    this.farmerSaved = this.api.getSavedCredential('farmer');
+    this.buyerSaved = this.api.getSavedCredential('buyer');
+    this.adminSaved = this.api.getSavedCredential('admin');
   }
 
-  open(defaultTab = 'farmer') {
+  async open(defaultTab = 'farmer') {
     this.activeTab = defaultTab;
-    this.step = 'phone';
-    this.currentPhone = defaultTab === 'farmer' ? '9876543210' : '';
+    this.step = 'email';
     this.error = null;
+    this.successMessage = null;
+    this.isLoading = false;
+    this.isRealEmail = false;
+    this.clearIntervalTimer();
+
+    this.farmerSaved = this.api.getSavedCredential('farmer');
+    this.buyerSaved = this.api.getSavedCredential('buyer');
+    this.adminSaved = this.api.getSavedCredential('admin');
+
+    if (defaultTab === 'farmer') {
+      if (this.farmerSaved?.password) {
+        this.currentEmail = this.farmerSaved.email || 'ramesh.farmer@krishislot.in';
+        this.authMode = 'password';
+      } else {
+        this.currentEmail = 'ramesh.farmer@krishislot.in';
+        this.authMode = 'otp';
+      }
+    } else if (defaultTab === 'admin') {
+      this.currentEmail = this.adminSaved?.identifier || 'admin@krishislot.in';
+      this.authMode = 'password';
+    } else if (defaultTab === 'buyer') {
+      this.currentEmail = this.buyerSaved?.identifier || 'buyer@agrocorp.in';
+      this.authMode = 'password';
+    }
+
     this.render();
+
+    // Check live gateway status from server
+    try {
+      this.emailConfig = await this.api.getEmailStatus();
+      this.render();
+    } catch {
+      // ignore
+    }
   }
 
   close() {
+    this.clearIntervalTimer();
     const el = document.getElementById('auth-modal-root');
     if (el) el.innerHTML = '';
   }
 
-  async handleSendOtp() {
-    const input = document.getElementById('auth-phone-input');
-    const phone = input ? input.value.trim() : '';
-    if (!phone || phone.length < 10) {
-      this.error = 'Please enter a valid 10-digit mobile number.';
+  clearIntervalTimer() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+      this.timerInterval = null;
+    }
+  }
+
+  startResendTimer(seconds = 60) {
+    this.clearIntervalTimer();
+    this.countdownSeconds = seconds;
+    this.timerInterval = setInterval(() => {
+      this.countdownSeconds--;
+      const timerSpan = document.getElementById('auth-timer-display');
+      const resendBtn = document.getElementById('btn-resend-email-otp');
+      if (timerSpan) {
+        timerSpan.textContent = `(${this.countdownSeconds}s)`;
+      }
+      if (this.countdownSeconds <= 0) {
+        this.clearIntervalTimer();
+        if (timerSpan) timerSpan.textContent = '';
+        if (resendBtn) resendBtn.removeAttribute('disabled');
+      }
+    }, 1000);
+  }
+
+  // --- EMAIL OTP FLOW ---
+  async handleSendOtp(emailOverride = null) {
+    const input = document.getElementById('auth-email-input');
+    const email = (emailOverride || (input ? input.value : '')).trim().toLowerCase();
+
+    if (!email || !email.includes('@') || email.length < 5) {
+      this.error = 'Please enter a valid email address (e.g. farmer@krishislot.in).';
       this.render();
       return;
     }
 
+    this.currentEmail = email;
+    this.isLoading = true;
+    this.error = null;
+    this.render();
+
     try {
-      this.error = null;
-      const res = await this.api.sendOtp(phone);
-      this.currentPhone = phone;
+      const res = await this.api.sendEmailOtp(email);
+      this.isLoading = false;
+      this.isRealEmail = Boolean(res.isRealEmail);
       this.demoOtp = res.demoOtp || '';
       this.step = 'otp';
+      this.successMessage = res.message || `Verification code sent to ${email}`;
       this.render();
+      this.startResendTimer(60);
     } catch (err) {
-      this.error = err.message || 'Failed to send OTP';
+      this.isLoading = false;
+      this.error = err.message || 'Failed to dispatch email verification code.';
       this.render();
     }
   }
 
   async handleVerifyOtp() {
-    const input = document.getElementById('auth-otp-input');
-    const otp = input ? input.value.trim() : '';
-    if (!otp) {
-      this.error = 'Please enter the 6-digit OTP sent via SMS.';
+    const otpInput = document.getElementById('auth-otp-input');
+    const otp = otpInput ? otpInput.value.trim() : '';
+    const newPwdInput = document.getElementById('auth-save-pwd-input');
+    const savePassword = newPwdInput ? newPwdInput.value.trim() : '';
+    const rememberCheckbox = document.getElementById('auth-save-pwd-remember');
+    const remember = rememberCheckbox ? rememberCheckbox.checked : true;
+
+    if (!otp || otp.length < 4) {
+      this.error = 'Please enter the 6-digit verification code sent to your email.';
       this.render();
       return;
     }
 
+    this.isLoading = true;
+    this.error = null;
+    this.render();
+
     try {
-      this.error = null;
-      const res = await this.api.verifyOtp(this.currentPhone, otp);
+      const res = await this.api.verifyEmailOtp(this.currentEmail, otp, savePassword || null);
+      this.isLoading = false;
+
+      if (savePassword && remember) {
+        this.api.setSavedCredential(this.activeTab, {
+          email: this.currentEmail,
+          identifier: this.currentEmail,
+          password: savePassword
+        });
+      }
+
       this.close();
       if (this.onLoginSuccess) this.onLoginSuccess(res.user);
     } catch (err) {
-      this.error = err.message || 'Verification failed';
+      this.isLoading = false;
+      this.error = err.message || 'Verification failed. Please check the code.';
       this.render();
     }
   }
 
-  async handleAdminLogin() {
-    const idInput = document.getElementById('auth-admin-id');
-    const pwdInput = document.getElementById('auth-admin-pwd');
-    const staffId = idInput ? idInput.value.trim() : '';
+  // --- PASSWORD LOGIN (FARMER / BUYER / ADMIN) ---
+  async handlePasswordLogin() {
+    const identInput = document.getElementById('auth-pwd-ident-input');
+    const pwdInput = document.getElementById('auth-pwd-input');
+    const identifier = identInput ? identInput.value.trim() : '';
     const password = pwdInput ? pwdInput.value : '';
+    const rememberCheckbox = document.getElementById('auth-remember-password-checkbox');
+    const remember = rememberCheckbox ? rememberCheckbox.checked : true;
 
-    if (!staffId || !password) {
-      this.error = 'Please enter both Admin/Staff ID and Password.';
+    if (!identifier) {
+      this.error = this.activeTab === 'farmer' 
+        ? 'Please enter your registered email.' 
+        : 'Please enter your ID or Email.';
       this.render();
       return;
     }
 
-    try {
-      this.error = null;
-      const res = await this.api.loginStaff(staffId, password);
-      this.close();
-      if (this.onLoginSuccess) this.onLoginSuccess(res.user);
-    } catch (err) {
-      this.error = err.message || 'Admin login failed';
-      this.render();
-    }
-  }
-
-  async handleBuyerLogin() {
-    const idInput = document.getElementById('auth-buyer-id');
-    const pwdInput = document.getElementById('auth-buyer-pwd');
-    const identifier = idInput ? idInput.value.trim() : '';
-    const password = pwdInput ? pwdInput.value : '';
-
-    if (!identifier || !password) {
-      this.error = 'Please enter both Buyer ID / Mobile and Password.';
+    if (!password) {
+      this.error = 'Please enter your password.';
       this.render();
       return;
     }
 
+    this.isLoading = true;
+    this.error = null;
+    this.render();
+
     try {
-      this.error = null;
-      const res = await this.api.loginBuyer(identifier, password);
+      let res;
+      if (this.activeTab === 'admin') {
+        res = await this.api.loginStaff(identifier, password);
+      } else if (this.activeTab === 'buyer') {
+        res = await this.api.loginBuyer(identifier, password);
+      } else {
+        res = await this.api.loginWithEmailPassword(identifier, password);
+      }
+
+      this.isLoading = false;
+
+      if (remember) {
+        this.api.setSavedCredential(this.activeTab, {
+          email: identifier,
+          identifier,
+          password
+        });
+      } else {
+        this.api.setSavedCredential(this.activeTab, null);
+      }
+
       this.close();
       if (this.onLoginSuccess) this.onLoginSuccess(res.user);
     } catch (err) {
-      this.error = err.message || 'Buyer login failed';
+      this.isLoading = false;
+      this.error = err.message || 'Login failed. Please check your credentials.';
       this.render();
     }
   }
 
+  // --- 1-CLICK INSTANT DEMO ---
   async handleQuickDemo(role) {
+    this.isLoading = true;
+    this.error = null;
+    this.render();
+
     try {
-      this.error = null;
       const res = await this.api.quickSwitch(role);
+      this.isLoading = false;
       this.close();
       if (this.onLoginSuccess) this.onLoginSuccess(res.user);
     } catch (err) {
-      this.error = err.message || 'Quick login failed';
+      this.isLoading = false;
+      this.error = err.message || 'Instant login failed';
       this.render();
     }
   }
@@ -132,203 +257,444 @@ export class AuthModal {
       document.body.appendChild(container);
     }
 
+    const savedFarmer = this.api.getSavedCredential('farmer');
+    const savedBuyer = this.api.getSavedCredential('buyer');
+    const savedAdmin = this.api.getSavedCredential('admin');
+
+    // Default identifiers for the active tab
+    let defaultIdent = '';
+    let defaultPwd = '';
+    if (this.activeTab === 'farmer') {
+      defaultIdent = savedFarmer?.email || savedFarmer?.identifier || this.currentEmail || 'ramesh.farmer@krishislot.in';
+      defaultPwd = savedFarmer?.password || 'farmer123';
+    } else if (this.activeTab === 'admin') {
+      defaultIdent = savedAdmin?.identifier || 'admin@krishislot.in';
+      defaultPwd = savedAdmin?.password || 'admin123';
+    } else {
+      defaultIdent = savedBuyer?.identifier || 'buyer@agrocorp.in';
+      defaultPwd = savedBuyer?.password || 'buyer123';
+    }
+
     container.innerHTML = `
       <div class="modal-backdrop">
-        <div class="modal-window" style="max-width:480px">
-          <button id="modal-close" class="modal-close-btn">✕</button>
+        <div class="modal-window auth-modal-box">
+          <button id="modal-close" class="modal-close-btn" aria-label="Close modal">✕</button>
 
-          <div style="text-align:center;margin-bottom:20px">
-            <div style="font-size:36px;margin-bottom:6px">🌱</div>
-            <h2 style="font-size:22px;color:#0f2e1b;font-weight:800">KrishiSlot Login</h2>
-            <p style="font-size:13px;color:#6b7280">Unified Smart Mandi & Procurement Portal</p>
+          <!-- Modal Brand Header -->
+          <div class="auth-brand-header">
+            <div class="auth-brand-icon">🌱</div>
+            <h2 class="auth-brand-title">KrishiSlot Login</h2>
+            <p class="auth-brand-subtitle">Smart Mandi Slot Booking & Unified Procurement</p>
           </div>
 
           <!-- 3 Role Tabs -->
           <div class="auth-role-tabs">
             <button id="tab-farmer" class="auth-tab-btn ${this.activeTab === 'farmer' ? 'active' : ''}">
-              🌾 Farmer (Seller)
+              🌾 Farmer
             </button>
             <button id="tab-admin" class="auth-tab-btn ${this.activeTab === 'admin' ? 'active' : ''}">
               🛡️ Admin
             </button>
             <button id="tab-buyer" class="auth-tab-btn ${this.activeTab === 'buyer' ? 'active' : ''}">
-              🛒 Buyer (Trader)
+              🛒 Buyer
             </button>
           </div>
 
+          <!-- Feedback Alerts -->
           ${this.error ? `
-            <div style="background:#fee2e2;color:#b91c1c;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:18px;font-weight:600">
-              ⚠️ ${this.error}
+            <div class="auth-alert error">
+              <span>⚠️</span>
+              <span style="flex:1">${this.error}</span>
             </div>
           ` : ''}
 
-          <!-- TAB 1: FARMER (SELLER) -->
-          ${this.activeTab === 'farmer' ? `
-            <div class="auth-role-header">
-              <strong>🌾 Farmer / Crop Seller Access</strong>
-              <span>Book procurement slots, track mandi queue, J-Forms & DBT payments</span>
+          ${this.successMessage ? `
+            <div class="auth-alert success">
+              <span>✅</span>
+              <span style="flex:1">${this.successMessage}</span>
             </div>
+          ` : ''}
 
-            ${this.step === 'phone' ? `
-              <div class="form-field">
-                <label>Registered Mobile Number / मोबाइल नंबर</label>
-                <div style="display:flex;gap:8px">
-                  <span style="display:flex;align-items:center;padding:0 14px;background:#f3f4f6;border:1.5px solid #d4dfd2;border-radius:12px;font-weight:700;color:#374151">+91</span>
-                  <input id="auth-phone-input" type="tel" value="${this.currentPhone || '9876543210'}" placeholder="Enter 10-digit mobile" maxlength="10" />
+          <!-- Role Description Banner -->
+          <div class="auth-role-header">
+            <strong>${
+              this.activeTab === 'farmer' ? '🌾 Farmer / Crop Seller Portal' :
+              this.activeTab === 'admin' ? '🛡️ APMC Admin & Mandi Command' :
+              '🛒 Commercial Buyer & Trader Portal'
+            }</strong>
+            <span>${
+              this.activeTab === 'farmer' ? 'Book slots, track real-time queue, J-Forms & DBT payments' :
+              this.activeTab === 'admin' ? 'Manage procurement centres, call tokens & weighment assays' :
+              'Browse arrival lots, place verified bids & download gate passes'
+            }</span>
+          </div>
+
+          <!-- Real Gmail Gateway Status Badge -->
+          ${this.emailConfig?.configured ? `
+            <div class="auth-gateway-badge active" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:9px 12px;font-size:12px;color:#1e40af;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">🟢</span>
+              <div>
+                <b>Live Gmail Gateway Active:</b> Real OTP will be sent to your Gmail inbox from <code>${this.emailConfig.senderEmail}</code>.
+              </div>
+            </div>
+          ` : `
+            <div class="auth-gateway-badge demo" style="background:#fefce8;border:1px solid #fef08a;border-radius:10px;padding:9px 12px;font-size:12px;color:#854d0e;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+              <span style="font-size:16px">💡</span>
+              <div>
+                <b>Real Gmail Delivery:</b> Set <code>GMAIL_USER</code> & <code>GMAIL_APP_PASSWORD</code> in <code>.env</code> for live inbox delivery.
+              </div>
+            </div>
+          `}
+
+          <!-- Mode Switcher: Email OTP vs Password -->
+          <div class="auth-mode-switch">
+            <button id="mode-pill-otp" class="auth-mode-pill ${this.authMode === 'otp' ? 'active' : ''}">
+              📧 Email OTP Login
+            </button>
+            <button id="mode-pill-password" class="auth-mode-pill ${this.authMode === 'password' ? 'active' : ''}">
+              🔑 Password Login
+            </button>
+          </div>
+
+          <!-- ========================================== -->
+          <!-- MODE 1: EMAIL OTP FLOW                      -->
+          <!-- ========================================== -->
+          ${this.authMode === 'otp' ? `
+            ${this.step === 'email' ? `
+              <!-- Step A: Enter Email Address -->
+              <form id="email-otp-send-form" action="#" onsubmit="return false;">
+                <div class="form-field">
+                  <label for="auth-email-input">Your Gmail / Registered Email</label>
+                  <div class="auth-input-icon-wrapper">
+                    <span class="auth-input-icon">✉️</span>
+                    <input 
+                      id="auth-email-input" 
+                      name="email"
+                      type="email" 
+                      value="${this.currentEmail || 'ramesh.farmer@krishislot.in'}" 
+                      placeholder="Enter your email (e.g. name@gmail.com)" 
+                      autocomplete="email"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:10px;font-size:12px;color:#166534;margin-bottom:18px">
-                💡 <b>Demo Account Ready:</b> Mobile <code>9876543210</code> (Ramesh Kumar). Live SMS will appear in virtual mobile phone!
-              </div>
+                <div class="auth-info-note">
+                  ${this.emailConfig?.configured 
+                    ? `📬 <b>Live Gmail Gateway:</b> A real 6-digit OTP will be dispatched straight to this email inbox!` 
+                    : `💡 <b>Instant Demo Mode:</b> Enter any email (e.g. <code>${this.currentEmail || 'ramesh.farmer@krishislot.in'}</code>) for immediate testing.`}
+                </div>
 
-              <button id="btn-submit-phone" class="cta" style="width:100%;margin-bottom:12px">
-                Get OTP via SMS / ओटीपी प्राप्त करें →
-              </button>
+                <button id="btn-submit-email" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
+                  ${this.isLoading ? '⏳ Sending OTP to Email...' : 'Get OTP on Email / ओटीपी प्राप्त करें →'}
+                </button>
 
-              <div style="display:flex;align-items:center;gap:10px;margin:12px 0">
-                <div style="flex:1;height:1px;background:#e5e7eb"></div>
-                <span style="font-size:11px;color:#9ca3af;font-weight:600">OR 1-CLICK INSTANT DEMO</span>
-                <div style="flex:1;height:1px;background:#e5e7eb"></div>
-              </div>
-
-              <button id="btn-quick-farmer" class="btn-secondary" style="width:100%;font-weight:700">
-                ⚡ Instant Login: Farmer Ramesh Kumar
-              </button>
+                <div class="auth-footer-link">
+                  <button type="button" id="btn-switch-to-pwd-mode" class="auth-link-btn">
+                    Already have a password? Login with Password →
+                  </button>
+                </div>
+              </form>
             ` : `
+              <!-- Step B: Verify OTP Code -->
+              <form id="email-otp-verify-form" action="#" onsubmit="return false;">
+                <div class="form-field">
+                  <label for="auth-otp-input">
+                    Enter 6-Digit Code sent to <b>${this.currentEmail}</b>
+                  </label>
+                  <input 
+                    id="auth-otp-input" 
+                    name="otp"
+                    type="text" 
+                    placeholder="${this.demoOtp || '123456'}" 
+                    maxlength="6" 
+                    class="auth-otp-field"
+                    autocomplete="one-time-code"
+                    autofocus
+                  />
+                </div>
+
+                ${this.isRealEmail ? `
+                  <div class="auth-real-gmail-banner" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+                    <span style="font-size:26px">📬</span>
+                    <div>
+                      <b style="color:#166534;font-size:13px">Real Gmail OTP Sent!</b>
+                      <div style="font-size:12px;color:#15803d;margin-top:2px">
+                        Check your Gmail inbox (or spam folder) for <b>${this.currentEmail}</b>.
+                      </div>
+                    </div>
+                  </div>
+                ` : (this.demoOtp ? `
+                  <div class="auth-demo-otp-banner">
+                    <div>
+                      <span style="font-size:11px;color:#065f46;display:block">Received Email OTP:</span>
+                      <strong style="font-size:18px;letter-spacing:0.15em;color:#047857">${this.demoOtp}</strong>
+                    </div>
+                    <button type="button" id="btn-autofill-otp" class="btn-outline btn-sm auth-autofill-btn">
+                      ⚡ Auto-fill Code
+                    </button>
+                  </div>
+                ` : '')}
+
+                <!-- Optional Save Password -->
+                <div class="auth-save-box">
+                  <div class="auth-save-header">
+                    <span>🔒 Set / Remember Password (Optional)</span>
+                  </div>
+                  <p style="font-size:11.5px;color:#64748b;margin-bottom:8px">
+                    Save a password to login instantly next time without waiting for an email code!
+                  </p>
+                  <div class="auth-pwd-wrapper">
+                    <input 
+                      id="auth-save-pwd-input" 
+                      name="new-password"
+                      type="${this.showSavePwd ? 'text' : 'password'}" 
+                      placeholder="Create password (e.g. farmer123)" 
+                      autocomplete="new-password"
+                      value="${savedFarmer?.password || ''}"
+                    />
+                    <button type="button" id="btn-toggle-save-pwd" class="auth-eye-btn" title="Toggle visibility">
+                      ${this.showSavePwd ? '🙈' : '👁️'}
+                    </button>
+                  </div>
+                  <label class="auth-checkbox-row">
+                    <input id="auth-save-pwd-remember" type="checkbox" checked />
+                    <span>Remember credentials on this device</span>
+                  </label>
+                </div>
+
+                <button id="btn-submit-otp" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
+                  ${this.isLoading ? '⏳ Verifying Code...' : 'Verify OTP & Enter / सत्यापित करें →'}
+                </button>
+
+                <div class="auth-verify-actions">
+                  <button type="button" id="btn-back-email" class="auth-link-btn" style="color:#64748b">
+                    ← Change Email
+                  </button>
+                  <button type="button" id="btn-resend-email-otp" class="auth-link-btn" ${this.countdownSeconds > 0 ? 'disabled' : ''}>
+                    Resend Code <span id="auth-timer-display">${this.countdownSeconds > 0 ? `(${this.countdownSeconds}s)` : ''}</span>
+                  </button>
+                </div>
+              </form>
+            `}
+          ` : `
+            <!-- ========================================== -->
+            <!-- MODE 2: PASSWORD LOGIN FLOW                 -->
+            <!-- ========================================== -->
+            <form id="password-login-form" action="#" onsubmit="return false;">
               <div class="form-field">
-                <label>Enter 6-Digit SMS OTP sent to +91 ${this.currentPhone}</label>
-                <input id="auth-otp-input" type="text" placeholder="e.g. ${this.demoOtp || '123456'}" maxlength="6" style="font-size:22px;letter-spacing:0.2em;text-align:center" />
+                <label for="auth-pwd-ident-input">
+                  ${this.activeTab === 'farmer' ? 'Registered Email / ईमेल पता' :
+                    this.activeTab === 'admin' ? 'Staff ID or Admin Email' :
+                    'Buyer ID or Commercial Email'}
+                </label>
+                <div class="auth-input-icon-wrapper">
+                  <span class="auth-input-icon">👤</span>
+                  <input 
+                    id="auth-pwd-ident-input" 
+                    name="username"
+                    type="${this.activeTab === 'farmer' ? 'email' : 'text'}" 
+                    value="${defaultIdent}" 
+                    placeholder="${
+                      this.activeTab === 'farmer' ? 'ramesh.farmer@krishislot.in' :
+                      this.activeTab === 'admin' ? 'APMC-ADMIN or admin@krishislot.in' :
+                      'BUYER-01 or buyer@agrocorp.in'
+                    }" 
+                    autocomplete="username"
+                    required
+                  />
+                </div>
               </div>
 
-              ${this.demoOtp ? `
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;background:#ecfdf5;border:1px solid #a7f3d0;padding:10px 14px;border-radius:10px;font-size:12px;color:#065f46">
-                  <span>SMS OTP Received: <b>${this.demoOtp}</b></span>
-                  <button id="btn-autofill-otp" class="btn-outline btn-sm" style="background:#fff">Auto-fill</button>
+              <div class="form-field">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                  <label for="auth-pwd-input" style="margin:0">Password / पासवर्ड</label>
+                  <button type="button" id="btn-switch-to-otp-reset" class="auth-link-btn" style="font-size:11.5px">
+                    Forgot Password? Login with OTP
+                  </button>
                 </div>
-              ` : ''}
+                <div class="auth-pwd-wrapper">
+                  <input 
+                    id="auth-pwd-input" 
+                    name="password"
+                    type="${this.showLoginPwd ? 'text' : 'password'}" 
+                    value="${defaultPwd}" 
+                    placeholder="Enter your password" 
+                    autocomplete="current-password"
+                    required
+                  />
+                  <button type="button" id="btn-toggle-login-pwd" class="auth-eye-btn" title="Toggle visibility">
+                    ${this.showLoginPwd ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
 
-              <button id="btn-submit-otp" class="cta" style="width:100%;margin-bottom:12px">
-                Verify OTP & Enter / सत्यापित करें →
+              <div style="margin-bottom:14px">
+                <label class="auth-checkbox-row">
+                  <input id="auth-remember-password-checkbox" type="checkbox" checked />
+                  <span>Remember me on this device</span>
+                </label>
+              </div>
+
+              <div class="auth-info-note">
+                🔑 <b>Demo Credentials:</b> <code>${defaultIdent}</code> / Password: <code>${defaultPwd}</code>
+              </div>
+
+              <button id="btn-submit-pwd-login" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
+                ${this.isLoading ? '⏳ Authenticating...' : 'Login with Password →'}
               </button>
 
-              <button id="btn-back-phone" class="btn-outline" style="width:100%">
-                ← Change Mobile Number
-              </button>
-            `}
-          ` : ''}
+              <div class="auth-footer-link">
+                <button type="button" id="btn-switch-to-otp-mode" class="auth-link-btn">
+                  ← Or Login using 1-Time Email OTP Code
+                </button>
+              </div>
+            </form>
+          `}
 
-          <!-- TAB 2: APMC ADMIN -->
-          ${this.activeTab === 'admin' ? `
-            <div class="auth-role-header">
-              <strong>🛡️ APMC Admin & Mandi Command Center</strong>
-              <span>Manage procurement centres, call tokens, weighment assay & DBT approvals</span>
-            </div>
+          <!-- 1-Click Demo Shortcut -->
+          <div class="auth-divider">
+            <div class="auth-divider-line"></div>
+            <span class="auth-divider-text">OR 1-CLICK INSTANT DEMO</span>
+            <div class="auth-divider-line"></div>
+          </div>
 
-            <div class="form-field">
-              <label>Staff / Admin Code</label>
-              <input id="auth-admin-id" type="text" value="APMC-ADMIN" placeholder="e.g. APMC-ADMIN or OFFICER-01" />
-            </div>
-
-            <div class="form-field">
-              <label>Password</label>
-              <input id="auth-admin-pwd" type="password" value="admin123" placeholder="Enter password" />
-            </div>
-
-            <div style="background:#fef3c7;border:1px solid #fde68a;padding:12px;border-radius:10px;font-size:12px;color:#92400e;margin-bottom:18px">
-              🔑 Demo Admin: <b>APMC-ADMIN</b> / Password: <b>admin123</b> (Director Alok Nath)
-            </div>
-
-            <button id="btn-submit-admin" class="cta" style="width:100%;margin-bottom:12px">
-              Admin Login →
-            </button>
-
-            <div style="display:flex;align-items:center;gap:10px;margin:12px 0">
-              <div style="flex:1;height:1px;background:#e5e7eb"></div>
-              <span style="font-size:11px;color:#9ca3af;font-weight:600">OR 1-CLICK INSTANT DEMO</span>
-              <div style="flex:1;height:1px;background:#e5e7eb"></div>
-            </div>
-
-            <button id="btn-quick-admin" class="btn-secondary" style="width:100%;font-weight:700">
-              ⚡ Instant Login: APMC Director (Admin)
-            </button>
-          ` : ''}
-
-          <!-- TAB 3: BUYER (TRADER / MILLER) -->
-          ${this.activeTab === 'buyer' ? `
-            <div class="auth-role-header">
-              <strong>🛒 Commercial Buyer / Trader Portal</strong>
-              <span>Browse Mandi arrival lots, submit bids, track contracts & download gate passes</span>
-            </div>
-
-            <div class="form-field">
-              <label>Buyer ID or Registered Mobile</label>
-              <input id="auth-buyer-id" type="text" value="BUYER-01" placeholder="e.g. BUYER-01 or 9822334455" />
-            </div>
-
-            <div class="form-field">
-              <label>Password</label>
-              <input id="auth-buyer-pwd" type="password" value="buyer123" placeholder="Enter password" />
-            </div>
-
-            <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:12px;border-radius:10px;font-size:12px;color:#1e40af;margin-bottom:18px">
-              🏢 Demo Buyer: <b>BUYER-01</b> (AgroCorp Foods) / Password: <b>buyer123</b>
-            </div>
-
-            <button id="btn-submit-buyer" class="cta" style="width:100%;margin-bottom:12px">
-              Buyer Portal Login →
-            </button>
-
-            <div style="display:flex;align-items:center;gap:10px;margin:12px 0">
-              <div style="flex:1;height:1px;background:#e5e7eb"></div>
-              <span style="font-size:11px;color:#9ca3af;font-weight:600">OR 1-CLICK INSTANT DEMO</span>
-              <div style="flex:1;height:1px;background:#e5e7eb"></div>
-            </div>
-
-            <button id="btn-quick-buyer" class="btn-secondary" style="width:100%;font-weight:700">
-              ⚡ Instant Login: AgroCorp Foods (Buyer)
-            </button>
-          ` : ''}
-
+          <button id="btn-quick-active-role" type="button" class="btn-secondary auth-quick-btn">
+            ⚡ Instant Login: ${
+              this.activeTab === 'farmer' ? 'Farmer Ramesh Kumar' :
+              this.activeTab === 'admin' ? 'APMC Director Dr. Alok Nath' :
+              'Commercial Buyer Vikram (AgroCorp)'
+            }
+          </button>
         </div>
       </div>
     `;
 
-    // Bind events
+    this.bindEvents();
+  }
+
+  bindEvents() {
+    // Modal Close
     document.getElementById('modal-close')?.addEventListener('click', () => this.close());
-    
+
+    // Role Tab Switching
     document.getElementById('tab-farmer')?.addEventListener('click', () => {
       this.activeTab = 'farmer';
+      this.step = 'email';
+      this.currentEmail = this.farmerSaved?.email || 'ramesh.farmer@krishislot.in';
+      this.error = null;
+      this.successMessage = null;
       this.render();
     });
+
     document.getElementById('tab-admin')?.addEventListener('click', () => {
       this.activeTab = 'admin';
+      this.step = 'email';
+      this.currentEmail = this.adminSaved?.identifier || 'admin@krishislot.in';
+      this.authMode = 'password';
+      this.error = null;
+      this.successMessage = null;
       this.render();
     });
+
     document.getElementById('tab-buyer')?.addEventListener('click', () => {
       this.activeTab = 'buyer';
+      this.step = 'email';
+      this.currentEmail = this.buyerSaved?.identifier || 'buyer@agrocorp.in';
+      this.authMode = 'password';
+      this.error = null;
+      this.successMessage = null;
       this.render();
     });
 
-    // Farmer events
-    document.getElementById('btn-submit-phone')?.addEventListener('click', () => this.handleSendOtp());
+    // Mode Switching (OTP vs Password)
+    document.getElementById('mode-pill-otp')?.addEventListener('click', () => {
+      this.authMode = 'otp';
+      this.step = 'email';
+      this.error = null;
+      this.render();
+    });
+
+    document.getElementById('mode-pill-password')?.addEventListener('click', () => {
+      this.authMode = 'password';
+      this.error = null;
+      this.render();
+    });
+
+    document.getElementById('btn-switch-to-pwd-mode')?.addEventListener('click', () => {
+      this.authMode = 'password';
+      this.error = null;
+      this.render();
+    });
+
+    document.getElementById('btn-switch-to-otp-mode')?.addEventListener('click', () => {
+      this.authMode = 'otp';
+      this.step = 'email';
+      this.error = null;
+      this.render();
+    });
+
+    document.getElementById('btn-switch-to-otp-reset')?.addEventListener('click', () => {
+      this.authMode = 'otp';
+      this.step = 'email';
+      this.error = null;
+      this.render();
+    });
+
+    // Password Visibility Toggles
+    document.getElementById('btn-toggle-login-pwd')?.addEventListener('click', () => {
+      this.showLoginPwd = !this.showLoginPwd;
+      const inp = document.getElementById('auth-pwd-input');
+      if (inp) inp.type = this.showLoginPwd ? 'text' : 'password';
+      const btn = document.getElementById('btn-toggle-login-pwd');
+      if (btn) btn.textContent = this.showLoginPwd ? '🙈' : '👁️';
+    });
+
+    document.getElementById('btn-toggle-save-pwd')?.addEventListener('click', () => {
+      this.showSavePwd = !this.showSavePwd;
+      const inp = document.getElementById('auth-save-pwd-input');
+      if (inp) inp.type = this.showSavePwd ? 'text' : 'password';
+      const btn = document.getElementById('btn-toggle-save-pwd');
+      if (btn) btn.textContent = this.showSavePwd ? '🙈' : '👁️';
+    });
+
+    // Form Submissions
+    document.getElementById('email-otp-send-form')?.addEventListener('submit', () => this.handleSendOtp());
+    document.getElementById('btn-submit-email')?.addEventListener('click', () => this.handleSendOtp());
+
+    document.getElementById('email-otp-verify-form')?.addEventListener('submit', () => this.handleVerifyOtp());
     document.getElementById('btn-submit-otp')?.addEventListener('click', () => this.handleVerifyOtp());
+
+    document.getElementById('password-login-form')?.addEventListener('submit', () => this.handlePasswordLogin());
+    document.getElementById('btn-submit-pwd-login')?.addEventListener('click', () => this.handlePasswordLogin());
+
+    // Auto-fill OTP
     document.getElementById('btn-autofill-otp')?.addEventListener('click', () => {
       const otpInp = document.getElementById('auth-otp-input');
-      if (otpInp && this.demoOtp) otpInp.value = this.demoOtp;
+      if (otpInp && this.demoOtp) {
+        otpInp.value = this.demoOtp;
+        otpInp.focus();
+      }
     });
-    document.getElementById('btn-back-phone')?.addEventListener('click', () => {
-      this.step = 'phone';
+
+    // Back to change email
+    document.getElementById('btn-back-email')?.addEventListener('click', () => {
+      this.step = 'email';
+      this.error = null;
+      this.clearIntervalTimer();
       this.render();
     });
-    document.getElementById('btn-quick-farmer')?.addEventListener('click', () => this.handleQuickDemo('farmer'));
 
-    // Admin events
-    document.getElementById('btn-submit-admin')?.addEventListener('click', () => this.handleAdminLogin());
-    document.getElementById('btn-quick-admin')?.addEventListener('click', () => this.handleQuickDemo('admin'));
+    // Resend OTP
+    document.getElementById('btn-resend-email-otp')?.addEventListener('click', () => {
+      if (this.countdownSeconds <= 0) {
+        this.handleSendOtp(this.currentEmail);
+      }
+    });
 
-    // Buyer events
-    document.getElementById('btn-submit-buyer')?.addEventListener('click', () => this.handleBuyerLogin());
-    document.getElementById('btn-quick-buyer')?.addEventListener('click', () => this.handleQuickDemo('buyer'));
+    // 1-Click Instant Demo Button
+    document.getElementById('btn-quick-active-role')?.addEventListener('click', () => {
+      this.handleQuickDemo(this.activeTab);
+    });
   }
 }

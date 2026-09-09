@@ -43,10 +43,15 @@ export function renderProcurements({ procurements, t }) {
                       ${p.paymentStatus === 'PAID' ? 'Paid ✓' : (p.expectedDate ? `Expected ${p.expectedDate}` : 'Processing')}
                     </span>
                   </td>
-                  <td>
+                  <td style="white-space:nowrap">
                     <button class="btn-outline btn-sm btn-view-slip" data-id="${p.id}">
                       📄 ${t.procurements.actionSlip}
                     </button>
+                    ${p.paymentStatus !== 'PAID' ? `
+                      <button class="btn-sm btn-secondary btn-approve-pay" data-id="${p.id}" style="margin-left:6px;font-size:11px" title="Simulate PFMS DBT Credit">
+                        ⚡ Clear DBT
+                      </button>
+                    ` : ''}
                   </td>
                 </tr>
               `).join('')}
@@ -58,14 +63,21 @@ export function renderProcurements({ procurements, t }) {
       <!-- Active Payment Pipeline Tracking (For Most Recent Transaction) -->
       ${list.length > 0 ? `
         <article class="card" style="margin-top:24px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
             <div>
               <h3 style="font-size:18px;font-weight:800">${t.procurements.pipelineTitle}</h3>
-              <p style="font-size:13px;color:#6b7280">Procurement ID: <b>${list[0].id}</b> • Net Payable: <b>₹${list[0].amount.toLocaleString('en-IN')}</b></p>
+              <p style="font-size:13px;color:#6b7280">Procurement ID: <b>${list[0].id}</b> • Net Payable: <b>₹${Number(list[0].amount).toLocaleString('en-IN')}</b></p>
             </div>
-            <span class="status-pill ${list[0].paymentStatus === 'PAID' ? 'paid' : 'processing'}">
-              ${list[0].paymentStatus === 'PAID' ? 'Payment Credited ✓' : 'In Processing via PFMS'}
-            </span>
+            <div style="display:flex;gap:10px;align-items:center">
+              <span class="status-pill ${list[0].paymentStatus === 'PAID' ? 'paid' : 'processing'}">
+                ${list[0].paymentStatus === 'PAID' ? 'Payment Credited ✓' : 'In Processing via PFMS'}
+              </span>
+              ${list[0].paymentStatus !== 'PAID' ? `
+                <button class="btn-sm btn-secondary btn-approve-pay" data-id="${list[0].id}">
+                  ⚡ Simulate PFMS DBT Clearing
+                </button>
+              ` : ''}
+            </div>
           </div>
 
           <div class="dbt-pipeline">

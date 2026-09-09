@@ -29,8 +29,8 @@
         }
       ],
       "dailyCapacity": 90,
-      "todayBooked": 69,
-      "todayCompleted": 44
+      "todayBooked": 77,
+      "todayCompleted": 49
     },
     {
       "id": "CTR-UP-02",
@@ -131,30 +131,63 @@
   ],
   "users": [
     {
+      "id": "FRM-UP-82657",
+      "role": "farmer",
+      "name": "Farmer Vanshmavi018",
+      "email": "vanshmavi018@gmail.com",
+      "phone": "9863244478",
+      "village": "Gorakhpur, Uttar Pradesh",
+      "aadhaarMasked": "•••• •••• 9463",
+      "bankName": "State Bank of India",
+      "bankAccMasked": "•••• •••• 9053",
+      "ifsc": "SBIN0001248",
+      "landAcres": 3.5,
+      "khasraNumber": "112/1"
+    },
+    {
+      "id": "FRM-UP-96036",
+      "role": "farmer",
+      "name": "Farmer (2305)",
+      "phone": "7291002305",
+      "village": "Gorakhpur, Uttar Pradesh",
+      "aadhaarMasked": "•••• •••• 7629",
+      "bankName": "State Bank of India",
+      "bankAccMasked": "•••• •••• 6428",
+      "ifsc": "SBIN0001248",
+      "landAcres": 3.5,
+      "khasraNumber": "112/1",
+      "passwordHash": "myFirebasePass2026",
+      "email": "farmer.demo@krishislot.in"
+    },
+    {
       "id": "FRM-UP-26032",
       "role": "farmer",
       "name": "Ramesh Kumar",
       "phone": "9876543210",
+      "passwordHash": "farmerPass2026",
       "village": "Jaitpur, Gorakhpur, Uttar Pradesh",
       "aadhaarMasked": "•••• •••• 5812",
       "bankName": "State Bank of India",
       "bankAccMasked": "•••• •••• 4862",
       "ifsc": "SBIN0001248",
       "landAcres": 4.5,
-      "khasraNumber": "142/2"
+      "khasraNumber": "142/2",
+      "email": "ramesh.farmer@krishislot.in"
     },
     {
       "id": "FRM-UP-26033",
       "role": "farmer",
       "name": "Sunita Devi",
       "phone": "9812345678",
+      "passwordHash": "farmer123",
       "village": "Bhiti, Gorakhpur, Uttar Pradesh",
       "aadhaarMasked": "•••• •••• 9104",
       "bankName": "Punjab National Bank",
       "bankAccMasked": "•••• •••• 8219",
       "ifsc": "PUNB0123400",
       "landAcres": 3.2,
-      "khasraNumber": "89/1"
+      "khasraNumber": "89/1",
+      "email": "sunita.farmer@krishislot.in"
     },
     {
       "id": "OFFICER-01",
@@ -164,7 +197,8 @@
       "centreId": "CTR-UP-01",
       "centreName": "Jaitpur Procurement Centre",
       "passwordHash": "admin123",
-      "designation": "Mandi Procurement Inspector"
+      "designation": "Mandi Procurement Inspector",
+      "email": "officer@krishislot.in"
     },
     {
       "id": "APMC-ADMIN",
@@ -172,7 +206,8 @@
       "name": "Dr. Alok Nath (Admin)",
       "staffId": "APMC-ADMIN",
       "passwordHash": "admin123",
-      "designation": "Director, Agricultural Marketing Board"
+      "designation": "Director, Agricultural Marketing Board",
+      "email": "admin@krishislot.in"
     },
     {
       "id": "BUYER-01",
@@ -185,7 +220,8 @@
       "licenseNo": "APMC-DL-8821",
       "gstin": "09AAACA1234Q1Z5",
       "businessType": "Grain Processor & Exporter",
-      "location": "Gorakhpur Industrial Corridor"
+      "location": "Gorakhpur Industrial Corridor",
+      "email": "buyer@agrocorp.in"
     },
     {
       "id": "BUYER-02",
@@ -198,10 +234,174 @@
       "licenseNo": "APMC-DL-5542",
       "gstin": "09AABCA9988P1Z3",
       "businessType": "Flour & Pulse Miller",
-      "location": "Sahjanwa Mandi Hub"
+      "location": "Sahjanwa Mandi Hub",
+      "email": "rajesh.buyer@krishislot.in"
     }
   ],
   "bookings": [
+    {
+      "id": "BK-2026-9535",
+      "token": "A-063",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "farmerEmail": "ramesh.farmer@krishislot.in",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "wheat",
+      "cropName": "Wheat / गेहूं",
+      "quantity": 50,
+      "vehicle": "Tractor Trolley",
+      "date": "2026-09-12",
+      "displayDate": "Saturday, 12 September",
+      "timeSlot": "10:30 – 11:00 AM",
+      "status": "CONFIRMED",
+      "queueStatus": "WAITING",
+      "createdAt": "2026-09-09T17:50:35.812Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9535|A-063|FRM-UP-26032|50QTL"
+    },
+    {
+      "id": "BK-2026-9461",
+      "token": "A-062",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "farmerEmail": "vanshmavi018@gmail.com",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 50,
+      "vehicle": "Tractor Trolley (UP-53-E2E)",
+      "date": "2026-09-15",
+      "displayDate": "Tuesday, 15 September",
+      "timeSlot": "10:30 – 11:00 AM",
+      "status": "COMPLETED",
+      "queueStatus": "COMPLETED",
+      "createdAt": "2026-09-09T17:39:51.329Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9461|A-062|FRM-UP-26032|50QTL",
+      "procurementId": "KR-2026-9327"
+    },
+    {
+      "id": "BK-2026-9447",
+      "token": "A-061",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "wheat",
+      "cropName": "Wheat / गेहूं",
+      "quantity": 50,
+      "vehicle": "Tractor Trolley",
+      "date": "2026-09-12",
+      "displayDate": "Saturday, 12 September",
+      "timeSlot": "10:30 – 11:00 AM",
+      "status": "CONFIRMED",
+      "queueStatus": "WAITING",
+      "createdAt": "2026-09-09T17:14:09.424Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9447|A-061|FRM-UP-26032|50QTL"
+    },
+    {
+      "id": "BK-2026-9688",
+      "token": "A-060",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 45,
+      "vehicle": "Tractor Trolley",
+      "date": "2026-09-12",
+      "displayDate": "Saturday, 12 September",
+      "timeSlot": "11:00 – 11:30 AM",
+      "status": "COMPLETED",
+      "queueStatus": "COMPLETED",
+      "createdAt": "2026-09-09T17:02:42.393Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9688|A-060|FRM-UP-26032|45QTL"
+    },
+    {
+      "id": "BK-2026-9996",
+      "token": "A-059",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "wheat",
+      "cropName": "Wheat / गेहूं",
+      "quantity": 50,
+      "vehicle": "Tractor Trolley",
+      "date": "2026-09-12",
+      "displayDate": "Saturday, 12 September",
+      "timeSlot": "10:30 – 11:00 AM",
+      "status": "CONFIRMED",
+      "queueStatus": "WAITING",
+      "createdAt": "2026-09-09T17:02:38.557Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9996|A-059|FRM-UP-26032|50QTL"
+    },
+    {
+      "id": "BK-2026-9224",
+      "token": "A-058",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "wheat",
+      "cropName": "Wheat / गेहूं",
+      "quantity": 50,
+      "vehicle": "Tractor Trolley",
+      "date": "2026-09-12",
+      "displayDate": "Saturday, 12 September",
+      "timeSlot": "10:30 – 11:00 AM",
+      "status": "CONFIRMED",
+      "queueStatus": "WAITING",
+      "createdAt": "2026-09-09T14:14:35.899Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9224|A-058|FRM-UP-26032|50QTL"
+    },
+    {
+      "id": "BK-2026-9126",
+      "token": "A-057",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 45,
+      "vehicle": "Tractor Trolley",
+      "date": "2026-09-12",
+      "displayDate": "Saturday, 12 September",
+      "timeSlot": "11:00 – 11:30 AM",
+      "status": "COMPLETED",
+      "queueStatus": "COMPLETED",
+      "createdAt": "2026-09-09T13:29:24.063Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9126|A-057|FRM-UP-26032|45QTL"
+    },
+    {
+      "id": "BK-2026-9794",
+      "token": "A-056",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "cropId": "wheat",
+      "cropName": "Wheat / गेहूं",
+      "quantity": 50,
+      "vehicle": "Tractor Trolley",
+      "date": "2026-09-12",
+      "displayDate": "Saturday, 12 September",
+      "timeSlot": "10:30 – 11:00 AM",
+      "status": "CONFIRMED",
+      "queueStatus": "WAITING",
+      "createdAt": "2026-09-09T13:29:19.913Z",
+      "qrCodeData": "KRISHISLOT|BK-2026-9794|A-056|FRM-UP-26032|50QTL"
+    },
     {
       "id": "BK-2026-9749",
       "token": "A-055",
@@ -384,6 +584,173 @@
     }
   ],
   "procurements": [
+    {
+      "id": "KR-2026-9327",
+      "bookingId": "BK-2026-9461",
+      "token": "A-062",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "farmerEmail": "ramesh.farmer@krishislot.in",
+      "date": "09 Sept 2026",
+      "crop": "Paddy • 50 qtl",
+      "cropId": "paddy_comm",
+      "cropFullName": "Paddy / धान (Common)",
+      "centre": "Jaitpur Procurement Centre",
+      "centreDistrict": "Gorakhpur",
+      "grossWeight": 52.5,
+      "tareWeight": 2.5,
+      "netWeight": 50,
+      "moisturePercent": 14,
+      "mspRate": 2300,
+      "effectiveRate": 2300,
+      "amount": 115000,
+      "status": "COMPLETED",
+      "paymentStatus": "PAID",
+      "expectedDate": "12 Sept 2026",
+      "utr": "SBI755974107456",
+      "officer": "V. K. Verma",
+      "bankName": "State Bank of India",
+      "bankAccMasked": "•••• •••• 4862",
+      "milestones": [
+        {
+          "stage": "Gate Inward & Token Verified",
+          "time": "09 Sept 2026, 11:09 pm",
+          "done": true
+        },
+        {
+          "stage": "Moisture & Quality Assay (14% FAQ)",
+          "time": "09 Sept 2026, 11:09 pm",
+          "done": true
+        },
+        {
+          "stage": "Weighbridge Weighed (50 qtl Net)",
+          "time": "09 Sept 2026, 11:09 pm",
+          "done": true
+        },
+        {
+          "stage": "Procurement J-Form Generated (#KR-2026-9327)",
+          "time": "09 Sept 2026, 11:09 pm",
+          "done": true
+        },
+        {
+          "stage": "DBT Payment Cleared via PFMS (UTR: SBI755974107456)",
+          "time": "09 Sept 2026",
+          "done": true
+        }
+      ],
+      "paidDate": "09 Sept 2026"
+    },
+    {
+      "id": "KR-2026-9911",
+      "bookingId": "BK-2026-9688",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "date": "09 Sept 2026",
+      "crop": "Paddy • 60 qtl",
+      "cropId": "paddy_comm",
+      "cropFullName": "Paddy / धान (Common)",
+      "centre": "Jaitpur Procurement Centre",
+      "centreDistrict": "Gorakhpur",
+      "grossWeight": 62.5,
+      "tareWeight": 2.5,
+      "netWeight": 60,
+      "moisturePercent": 14,
+      "mspRate": 2300,
+      "effectiveRate": 2300,
+      "amount": 138000,
+      "status": "COMPLETED",
+      "paymentStatus": "PAID",
+      "expectedDate": "12 Sept 2026",
+      "utr": "SBI733625456963",
+      "officer": "V. K. Verma",
+      "bankName": "State Bank of India",
+      "bankAccMasked": "•••• •••• 4862",
+      "milestones": [
+        {
+          "stage": "Gate Inward & Token Verified",
+          "time": "09 Sept 2026, 10:32 pm",
+          "done": true
+        },
+        {
+          "stage": "Moisture & Quality Assay (14% FAQ)",
+          "time": "09 Sept 2026, 10:32 pm",
+          "done": true
+        },
+        {
+          "stage": "Weighbridge Weighed (60 qtl Net)",
+          "time": "09 Sept 2026, 10:32 pm",
+          "done": true
+        },
+        {
+          "stage": "Procurement J-Form Generated (#KR-2026-9911)",
+          "time": "09 Sept 2026, 10:32 pm",
+          "done": true
+        },
+        {
+          "stage": "DBT Payment Cleared via PFMS (UTR: SBI733625456963)",
+          "time": "09 Sept 2026",
+          "done": true
+        }
+      ],
+      "paidDate": "09 Sept 2026"
+    },
+    {
+      "id": "KR-2026-9534",
+      "bookingId": "BK-2026-9126",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "date": "09 Sept 2026",
+      "crop": "Paddy • 60 qtl",
+      "cropId": "paddy_comm",
+      "cropFullName": "Paddy / धान (Common)",
+      "centre": "Jaitpur Procurement Centre",
+      "centreDistrict": "Gorakhpur",
+      "grossWeight": 62.5,
+      "tareWeight": 2.5,
+      "netWeight": 60,
+      "moisturePercent": 14,
+      "mspRate": 2300,
+      "effectiveRate": 2300,
+      "amount": 138000,
+      "status": "COMPLETED",
+      "paymentStatus": "PAID",
+      "expectedDate": "12 Sept 2026",
+      "utr": "SBI605642109236",
+      "officer": "V. K. Verma",
+      "bankName": "State Bank of India",
+      "bankAccMasked": "•••• •••• 4862",
+      "milestones": [
+        {
+          "stage": "Gate Inward & Token Verified",
+          "time": "09 Sept 2026, 06:59 pm",
+          "done": true
+        },
+        {
+          "stage": "Moisture & Quality Assay (14% FAQ)",
+          "time": "09 Sept 2026, 06:59 pm",
+          "done": true
+        },
+        {
+          "stage": "Weighbridge Weighed (60 qtl Net)",
+          "time": "09 Sept 2026, 06:59 pm",
+          "done": true
+        },
+        {
+          "stage": "Procurement J-Form Generated (#KR-2026-9534)",
+          "time": "09 Sept 2026, 06:59 pm",
+          "done": true
+        },
+        {
+          "stage": "DBT Payment Cleared via PFMS (UTR: SBI605642109236)",
+          "time": "09 Sept 2026",
+          "done": true
+        }
+      ],
+      "paidDate": "09 Sept 2026"
+    },
     {
       "id": "KR-2026-9298",
       "bookingId": "BK-2026-9749",
@@ -635,6 +1002,468 @@
     }
   ],
   "smsLogs": [
+    {
+      "id": "SMS-1788976235825-516",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Wheat खरीद स्लॉट Jaitpur Procurement Centre पर Saturday, 12 September (10:30 – 11:00 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-063 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:50:35.825Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788976107942-541",
+      "phone": "9899887766",
+      "recipientName": "Mohd. Aslam",
+      "senderId": "VK-KRISHI",
+      "type": "QUEUE_PROXIMITY",
+      "message": "⚠️ जरूरी सूचना: प्रिय Mohd. Aslam, आपके टोकन #A-049 के आगे केवल 5 किसान बाकी हैं। कृपया तुरंत Jaitpur Procurement Centre के काउंटर Counter 2 पर रिपोर्ट करें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:48:27.942Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788975597415-176",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "PAYMENT_CREDITED",
+      "message": "प्रिय Ramesh Kumar, रसीद #KR-2026-9327 के लिए ₹1,15,000 की DBT राशि आपके State Bank of India खाते में जमा कर दी गई है। UTR संख्या: SBI755974107456। - KrishiSlot DBT",
+      "timestamp": "2026-09-09T17:39:57.415Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788975594497-231",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "WEIGHMENT_SLIP",
+      "message": "प्रिय Ramesh Kumar, आपकी Paddy की कुल 50 क्विंटल तुलाई पूरी हुई। कुल देय राशि: ₹1,15,000। डिजिटल रसीद #KR-2026-9327 जारी की गई है। - KrishiSlot",
+      "timestamp": "2026-09-09T17:39:54.497Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788975594449-789",
+      "phone": "9812345678",
+      "recipientName": "Sunita Devi",
+      "senderId": "VK-KRISHI",
+      "type": "QUEUE_PROXIMITY",
+      "message": "⚠️ जरूरी सूचना: प्रिय Sunita Devi, आपके टोकन #A-048 के आगे केवल 5 किसान बाकी हैं। कृपया तुरंत Jaitpur Procurement Centre के काउंटर Counter 2 पर रिपोर्ट करें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:39:54.449Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788975591340-443",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Paddy खरीद स्लॉट Jaitpur Procurement Centre पर Tuesday, 15 September (10:30 – 11:00 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-062 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:39:51.340Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788974049433-802",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Wheat खरीद स्लॉट Jaitpur Procurement Centre पर Saturday, 12 September (10:30 – 11:00 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-061 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:14:09.433Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788973362550-756",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "PAYMENT_CREDITED",
+      "message": "प्रिय Ramesh Kumar, रसीद #KR-2026-9911 के लिए ₹1,38,000 की DBT राशि आपके State Bank of India खाते में जमा कर दी गई है। UTR संख्या: SBI733625456963। - KrishiSlot DBT",
+      "timestamp": "2026-09-09T17:02:42.550Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362524-951",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "WEIGHMENT_SLIP",
+      "message": "प्रिय Ramesh Kumar, आपकी Paddy की कुल 60 क्विंटल तुलाई पूरी हुई। कुल देय राशि: ₹1,38,000। डिजिटल रसीद #KR-2026-9911 जारी की गई है। - KrishiSlot",
+      "timestamp": "2026-09-09T17:02:42.524Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362490-591",
+      "phone": "9788112233",
+      "recipientName": "Kiran Yadav",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.491Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362487-445",
+      "phone": "9899887766",
+      "recipientName": "Mohd. Aslam",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.487Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362484-128",
+      "phone": "9812345678",
+      "recipientName": "Sunita Devi",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.484Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362480-425",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.480Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362476-358",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.476Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362473-712",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.473Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362469-687",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.469Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362465-435",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.465Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362461-995",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.461Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362457-430",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.457Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362453-394",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T17:02:42.453Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362431-766",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "QUEUE_PROXIMITY",
+      "message": "⚠️ जरूरी सूचना: प्रिय Ramesh Kumar, आपके टोकन #A-047 के आगे केवल 5 किसान बाकी हैं। कृपया तुरंत Jaitpur Procurement Centre के काउंटर Counter 2 पर रिपोर्ट करें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:02:42.431Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973362400-914",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Paddy खरीद स्लॉट Jaitpur Procurement Centre पर Saturday, 12 September (11:00 – 11:30 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-060 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:02:42.400Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788973358565-915",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Wheat खरीद स्लॉट Jaitpur Procurement Centre पर Saturday, 12 September (10:30 – 11:00 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-059 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T17:02:38.565Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788963275908-907",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Wheat खरीद स्लॉट Jaitpur Procurement Centre पर Saturday, 12 September (10:30 – 11:00 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-058 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T14:14:35.908Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788963275788-513",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "OTP",
+      "message": "कृषि स्लॉट (KrishiSlot) सत्यापन कोड: 123456 है। यह OTP 10 मिनट के लिए मान्य है। कृपया इसे किसी के साथ साझा न करें। - APMC KRISHI",
+      "timestamp": "2026-09-09T14:14:35.788Z",
+      "status": "DELIVERED",
+      "gateway": "firebase"
+    },
+    {
+      "id": "SMS-1788961333538-591",
+      "phone": "7291002305",
+      "recipientName": "Farmer (2305)",
+      "senderId": "VK-KRISHI",
+      "type": "OTP",
+      "message": "कृषि स्लॉट (KrishiSlot) सत्यापन कोड: 291406 है। यह OTP 10 मिनट के लिए मान्य है। कृपया इसे किसी के साथ साझा न करें। - APMC KRISHI",
+      "timestamp": "2026-09-09T13:42:13.538Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788961333502-340",
+      "phone": "7291002305",
+      "recipientName": "Farmer (2305)",
+      "senderId": "VK-KRISHI",
+      "type": "OTP",
+      "message": "कृषि स्लॉट (KrishiSlot) सत्यापन कोड: 721527 है। यह OTP 10 मिनट के लिए मान्य है। कृपया इसे किसी के साथ साझा न करें। - APMC KRISHI",
+      "timestamp": "2026-09-09T13:42:13.502Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564215-640",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "PAYMENT_CREDITED",
+      "message": "प्रिय Ramesh Kumar, रसीद #KR-2026-9534 के लिए ₹1,38,000 की DBT राशि आपके State Bank of India खाते में जमा कर दी गई है। UTR संख्या: SBI605642109236। - KrishiSlot DBT",
+      "timestamp": "2026-09-09T13:29:24.215Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564190-882",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "WEIGHMENT_SLIP",
+      "message": "प्रिय Ramesh Kumar, आपकी Paddy की कुल 60 क्विंटल तुलाई पूरी हुई। कुल देय राशि: ₹1,38,000। डिजिटल रसीद #KR-2026-9534 जारी की गई है। - KrishiSlot",
+      "timestamp": "2026-09-09T13:29:24.190Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564154-736",
+      "phone": "9788112233",
+      "recipientName": "Kiran Yadav",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.154Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564149-126",
+      "phone": "9899887766",
+      "recipientName": "Mohd. Aslam",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.149Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564145-982",
+      "phone": "9812345678",
+      "recipientName": "Sunita Devi",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.145Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564141-934",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.141Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564137-474",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.137Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564132-557",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.132Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564126-124",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.126Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564122-588",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.122Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564118-968",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "BROADCAST_DELAY",
+      "message": "सूचना: Jaitpur Procurement Centre पर Unseasonal rain and wet grain assay delay के चलते स्लॉट लगभग 45 मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC",
+      "timestamp": "2026-09-09T13:29:24.118Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564073-679",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Paddy खरीद स्लॉट Jaitpur Procurement Centre पर Saturday, 12 September (11:00 – 11:30 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-057 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T13:29:24.073Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960564018-134",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "OTP",
+      "message": "कृषि स्लॉट (KrishiSlot) सत्यापन कोड: 123456 है। यह OTP 10 मिनट के लिए मान्य है। कृपया इसे किसी के साथ साझा न करें। - APMC KRISHI",
+      "timestamp": "2026-09-09T13:29:24.018Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960559922-727",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "SLOT_CONFIRMED",
+      "message": "प्रिय Ramesh Kumar, आपका Wheat खरीद स्लॉट Jaitpur Procurement Centre पर Saturday, 12 September (10:30 – 11:00 AM) के लिए कन्फर्म हो गया है। आपका टोकन #A-056 है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot",
+      "timestamp": "2026-09-09T13:29:19.922Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1788960559742-119",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "VK-KRISHI",
+      "type": "OTP",
+      "message": "कृषि स्लॉट (KrishiSlot) सत्यापन कोड: 123456 है। यह OTP 10 मिनट के लिए मान्य है। कृपया इसे किसी के साथ साझा न करें। - APMC KRISHI",
+      "timestamp": "2026-09-09T13:29:19.742Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
     {
       "id": "SMS-1788917528394-222",
       "phone": "9876543210",
@@ -987,9 +1816,9 @@
   ],
   "activeQueue": {
     "centreId": "CTR-UP-01",
-    "nowServingNumber": 40,
-    "nowServingToken": "A-040",
-    "currentFarmer": "Farmer A-040",
+    "nowServingNumber": 44,
+    "nowServingToken": "A-044",
+    "currentFarmer": "Farmer A-044",
     "counter": 2,
     "avgWaitPerFarmerMin": 3,
     "counters": [
@@ -1002,8 +1831,8 @@
       {
         "id": 2,
         "name": "Counter 2 (Quality & Assay)",
-        "servingToken": "A-040",
-        "servingFarmer": "Farmer A-040"
+        "servingToken": "A-044",
+        "servingFarmer": "Farmer A-044"
       },
       {
         "id": 3,
@@ -1014,6 +1843,158 @@
     ]
   },
   "buyerOrders": [
+    {
+      "id": "BO-2026-530",
+      "buyerId": "BUYER-01",
+      "buyerName": "AgroCorp Foods Pvt Ltd",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 50,
+      "offeredRate": 2350,
+      "totalValue": 117500,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-417",
+      "createdAt": "2026-09-09T17:50:38.899Z"
+    },
+    {
+      "id": "BO-2026-542",
+      "buyerId": "APMC-ADMIN",
+      "buyerName": "Dr. Alok Nath (Admin)",
+      "cropId": "wheat",
+      "cropName": "Wheat / गेहूं",
+      "quantity": 50,
+      "offeredRate": 2425,
+      "totalValue": 121250,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-182",
+      "createdAt": "2026-09-09T17:33:08.956Z"
+    },
+    {
+      "id": "BO-2026-702",
+      "buyerId": "BUYER-01",
+      "buyerName": "AgroCorp Foods Pvt Ltd",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 50,
+      "offeredRate": 2350,
+      "totalValue": 117500,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-800",
+      "createdAt": "2026-09-09T17:14:09.546Z"
+    },
+    {
+      "id": "BO-2026-997",
+      "buyerId": "BUYER-01",
+      "buyerName": "Vikram Singhania",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 120,
+      "offeredRate": 2360,
+      "totalValue": 283200,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-689",
+      "createdAt": "2026-09-09T17:02:42.610Z"
+    },
+    {
+      "id": "BO-2026-424",
+      "buyerId": "BUYER-01",
+      "buyerName": "AgroCorp Foods Pvt Ltd",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 50,
+      "offeredRate": 2350,
+      "totalValue": 117500,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-212",
+      "createdAt": "2026-09-09T17:02:38.659Z"
+    },
+    {
+      "id": "BO-2026-323",
+      "buyerId": "BUYER-01",
+      "buyerName": "AgroCorp Foods Pvt Ltd",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 50,
+      "offeredRate": 2350,
+      "totalValue": 117500,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-146",
+      "createdAt": "2026-09-09T14:14:36.023Z"
+    },
+    {
+      "id": "BO-2026-415",
+      "buyerId": "BUYER-01",
+      "buyerName": "Vikram Singhania",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 120,
+      "offeredRate": 2360,
+      "totalValue": 283200,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-188",
+      "createdAt": "2026-09-09T13:29:24.288Z"
+    },
+    {
+      "id": "BO-2026-455",
+      "buyerId": "BUYER-01",
+      "buyerName": "AgroCorp Foods Pvt Ltd",
+      "cropId": "paddy_comm",
+      "cropName": "Paddy / धान (Common)",
+      "quantity": 50,
+      "offeredRate": 2350,
+      "totalValue": 117500,
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "status": "CONFIRMED",
+      "deliveryDate": "2026-09-15",
+      "pickupSlot": "11:00 AM – 01:00 PM",
+      "gatePassId": "GP-2026-512",
+      "createdAt": "2026-09-09T13:29:20.019Z"
+    },
     {
       "id": "BO-2026-525",
       "buyerId": "BUYER-01",
@@ -1092,6 +2073,812 @@
     }
   ],
   "notifications": [
+    {
+      "id": "NOTIF-1788976238926-467",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-530",
+      "message": "AgroCorp Foods Pvt Ltd booked 50 qtl Paddy / धान (Common) at Jaitpur Mandi (₹1,17,500). Gate Pass: GP-2026-417.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-530"
+      },
+      "timestamp": "2026-09-09T17:50:38.926Z"
+    },
+    {
+      "id": "NOTIF-1788976238920-935",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2350/qtl",
+      "message": "AgroCorp Foods Pvt Ltd placed an order for 50 qtl Paddy / धान (Common) for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": false,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-530"
+      },
+      "timestamp": "2026-09-09T17:50:38.920Z"
+    },
+    {
+      "id": "NOTIF-1788976238914-994",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-530",
+      "message": "Contract for 50 qtl Paddy / धान (Common) at ₹2350/qtl confirmed (Total ₹1,17,500). Gate pass #GP-2026-417 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-530",
+        "gatePassId": "GP-2026-417"
+      },
+      "timestamp": "2026-09-09T17:50:38.914Z"
+    },
+    {
+      "id": "NOTIF-1788976238813-586",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-063",
+      "message": "Ramesh Kumar scheduled 50 qtl Wheat / गेहूं arrival for Saturday, 12 September.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9535",
+        "token": "A-063"
+      },
+      "timestamp": "2026-09-09T17:50:38.813Z"
+    },
+    {
+      "id": "NOTIF-1788976238807-314",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-063",
+      "message": "Your Wheat / गेहूं delivery slot at Jaitpur Procurement Centre is confirmed for Saturday, 12 September (10:30 – 11:00 AM).",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9535",
+        "token": "A-063"
+      },
+      "timestamp": "2026-09-09T17:50:38.807Z"
+    },
+    {
+      "id": "NOTIF-1788976107951-317",
+      "userId": "FRM-UP-26034",
+      "role": "farmer",
+      "type": "QUEUE_ALERT",
+      "title": "Proximity Alert: Token #A-049",
+      "message": "Token #A-044 is now serving at Counter 2. Only ~5 tokens ahead of you! Please proceed to Mandi gate.",
+      "category": "alerts",
+      "read": false,
+      "link": "queue",
+      "meta": {
+        "token": "A-049",
+        "nowServingToken": "A-044"
+      },
+      "timestamp": "2026-09-09T17:48:27.951Z"
+    },
+    {
+      "id": "NOTIF-1788975600613-129",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "PAYMENT_CREDITED",
+      "title": "DBT Payment Dispatched: ₹1,15,000",
+      "message": "Direct Benefit Transfer of ₹1,15,000 for Receipt #KR-2026-9327 was credited via PFMS. UTR: SBI755974107456.",
+      "category": "payments",
+      "read": false,
+      "link": "procurements",
+      "meta": {
+        "receiptId": "KR-2026-9327",
+        "utr": "SBI755974107456",
+        "amount": 115000
+      },
+      "timestamp": "2026-09-09T17:40:00.613Z"
+    },
+    {
+      "id": "NOTIF-1788975597364-894",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "WEIGHMENT_RECORDED",
+      "title": "J-Form Issued: #KR-2026-9327",
+      "message": "Weighed 50 qtl Paddy / धान (Common). Total payable: ₹1,15,000. DBT payment initiated.",
+      "category": "payments",
+      "read": false,
+      "link": "procurements",
+      "meta": {
+        "receiptId": "KR-2026-9327",
+        "netWeight": 50,
+        "amount": 115000
+      },
+      "timestamp": "2026-09-09T17:39:57.364Z"
+    },
+    {
+      "id": "NOTIF-1788975594455-768",
+      "userId": "FRM-UP-26033",
+      "role": "farmer",
+      "type": "QUEUE_ALERT",
+      "title": "Proximity Alert: Token #A-048",
+      "message": "Token #A-043 is now serving at Counter 2. Only ~5 tokens ahead of you! Please proceed to Mandi gate.",
+      "category": "alerts",
+      "read": false,
+      "link": "queue",
+      "meta": {
+        "token": "A-048",
+        "nowServingToken": "A-043"
+      },
+      "timestamp": "2026-09-09T17:39:54.455Z"
+    },
+    {
+      "id": "NOTIF-1788975594415-916",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-062",
+      "message": "Ramesh Kumar scheduled 50 qtl Paddy / धान (Common) arrival for Tuesday, 15 September.",
+      "category": "slots",
+      "read": true,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9461",
+        "token": "A-062"
+      },
+      "timestamp": "2026-09-09T17:39:54.415Z"
+    },
+    {
+      "id": "NOTIF-1788975594408-893",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-062",
+      "message": "Your Paddy / धान (Common) delivery slot at Jaitpur Procurement Centre is confirmed for Tuesday, 15 September (10:30 – 11:00 AM).",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9461",
+        "token": "A-062"
+      },
+      "timestamp": "2026-09-09T17:39:54.408Z"
+    },
+    {
+      "id": "NOTIF-1788975189000-728",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-542",
+      "message": "Dr. Alok Nath (Admin) booked 50 qtl Wheat / गेहूं at Jaitpur Mandi (₹1,21,250). Gate Pass: GP-2026-182.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-542"
+      },
+      "timestamp": "2026-09-09T17:33:09.001Z"
+    },
+    {
+      "id": "NOTIF-1788975188994-793",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2425/qtl",
+      "message": "Dr. Alok Nath (Admin) placed an order for 50 qtl Wheat / गेहूं for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": false,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-542"
+      },
+      "timestamp": "2026-09-09T17:33:08.994Z"
+    },
+    {
+      "id": "NOTIF-1788975188987-231",
+      "userId": "APMC-ADMIN",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-542",
+      "message": "Contract for 50 qtl Wheat / गेहूं at ₹2425/qtl confirmed (Total ₹1,21,250). Gate pass #GP-2026-182 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-542",
+        "gatePassId": "GP-2026-182"
+      },
+      "timestamp": "2026-09-09T17:33:08.987Z"
+    },
+    {
+      "id": "NOTIF-1788974049565-367",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-702",
+      "message": "AgroCorp Foods Pvt Ltd booked 50 qtl Paddy / धान (Common) at Jaitpur Mandi (₹1,17,500). Gate Pass: GP-2026-800.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-702"
+      },
+      "timestamp": "2026-09-09T17:14:09.565Z"
+    },
+    {
+      "id": "NOTIF-1788974049560-365",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2350/qtl",
+      "message": "AgroCorp Foods Pvt Ltd placed an order for 50 qtl Paddy / धान (Common) for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": false,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-702"
+      },
+      "timestamp": "2026-09-09T17:14:09.560Z"
+    },
+    {
+      "id": "NOTIF-1788974049556-963",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-702",
+      "message": "Contract for 50 qtl Paddy / धान (Common) at ₹2350/qtl confirmed (Total ₹1,17,500). Gate pass #GP-2026-800 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-702",
+        "gatePassId": "GP-2026-800"
+      },
+      "timestamp": "2026-09-09T17:14:09.556Z"
+    },
+    {
+      "id": "NOTIF-1788974049441-346",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-061",
+      "message": "Ramesh Kumar scheduled 50 qtl Wheat / गेहूं arrival for Saturday, 12 September.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9447",
+        "token": "A-061"
+      },
+      "timestamp": "2026-09-09T17:14:09.441Z"
+    },
+    {
+      "id": "NOTIF-1788974049437-994",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-061",
+      "message": "Your Wheat / गेहूं delivery slot at Jaitpur Procurement Centre is confirmed for Saturday, 12 September (10:30 – 11:00 AM).",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9447",
+        "token": "A-061"
+      },
+      "timestamp": "2026-09-09T17:14:09.437Z"
+    },
+    {
+      "id": "NOTIF-1788973362621-190",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-997",
+      "message": "Vikram Singhania booked 120 qtl Paddy / धान (Common) at Jaitpur Mandi (₹2,83,200). Gate Pass: GP-2026-689.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-997"
+      },
+      "timestamp": "2026-09-09T17:02:42.621Z"
+    },
+    {
+      "id": "NOTIF-1788973362618-521",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2360/qtl",
+      "message": "Vikram Singhania placed an order for 120 qtl Paddy / धान (Common) for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": true,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-997"
+      },
+      "timestamp": "2026-09-09T17:02:42.618Z"
+    },
+    {
+      "id": "NOTIF-1788973362614-230",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-997",
+      "message": "Contract for 120 qtl Paddy / धान (Common) at ₹2360/qtl confirmed (Total ₹2,83,200). Gate pass #GP-2026-689 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-997",
+        "gatePassId": "GP-2026-689"
+      },
+      "timestamp": "2026-09-09T17:02:42.614Z"
+    },
+    {
+      "id": "NOTIF-1788973362555-250",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "PAYMENT_CREDITED",
+      "title": "DBT Payment Dispatched: ₹1,38,000",
+      "message": "Direct Benefit Transfer of ₹1,38,000 for Receipt #KR-2026-9911 was credited via PFMS. UTR: SBI733625456963.",
+      "category": "payments",
+      "read": true,
+      "link": "procurements",
+      "meta": {
+        "receiptId": "KR-2026-9911",
+        "utr": "SBI733625456963",
+        "amount": 138000
+      },
+      "timestamp": "2026-09-09T17:02:42.555Z"
+    },
+    {
+      "id": "NOTIF-1788973362528-273",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "WEIGHMENT_RECORDED",
+      "title": "J-Form Issued: #KR-2026-9911",
+      "message": "Weighed 60 qtl Paddy / धान (Common). Total payable: ₹1,38,000. DBT payment initiated.",
+      "category": "payments",
+      "read": true,
+      "link": "procurements",
+      "meta": {
+        "receiptId": "KR-2026-9911",
+        "netWeight": 60,
+        "amount": 138000
+      },
+      "timestamp": "2026-09-09T17:02:42.528Z"
+    },
+    {
+      "id": "NOTIF-1788973362494-809",
+      "userId": null,
+      "role": "all",
+      "type": "ADMIN_ALERT",
+      "title": "Mandi Delay Broadcast: Jaitpur Procurement Centre",
+      "message": "Unseasonal rain and wet grain assay delay. Operations are estimated to be delayed by approximately 45 minutes.",
+      "category": "alerts",
+      "read": true,
+      "link": "queue",
+      "meta": {
+        "delayMins": 45,
+        "centreId": "CTR-UP-01"
+      },
+      "timestamp": "2026-09-09T17:02:42.494Z"
+    },
+    {
+      "id": "NOTIF-1788973362435-955",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "QUEUE_ALERT",
+      "title": "Proximity Alert: Token #A-047",
+      "message": "Token #A-042 is now serving at Counter 2. Only ~5 tokens ahead of you! Please proceed to Mandi gate.",
+      "category": "alerts",
+      "read": true,
+      "link": "queue",
+      "meta": {
+        "token": "A-047",
+        "nowServingToken": "A-042"
+      },
+      "timestamp": "2026-09-09T17:02:42.435Z"
+    },
+    {
+      "id": "NOTIF-1788973362408-600",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-060",
+      "message": "Ramesh Kumar scheduled 45 qtl Paddy / धान (Common) arrival for Saturday, 12 September.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9688",
+        "token": "A-060"
+      },
+      "timestamp": "2026-09-09T17:02:42.408Z"
+    },
+    {
+      "id": "NOTIF-1788973362404-142",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-060",
+      "message": "Your Paddy / धान (Common) delivery slot at Jaitpur Procurement Centre is confirmed for Saturday, 12 September (11:00 – 11:30 AM).",
+      "category": "slots",
+      "read": true,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9688",
+        "token": "A-060"
+      },
+      "timestamp": "2026-09-09T17:02:42.404Z"
+    },
+    {
+      "id": "NOTIF-1788973358677-754",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-424",
+      "message": "AgroCorp Foods Pvt Ltd booked 50 qtl Paddy / धान (Common) at Jaitpur Mandi (₹1,17,500). Gate Pass: GP-2026-212.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-424"
+      },
+      "timestamp": "2026-09-09T17:02:38.677Z"
+    },
+    {
+      "id": "NOTIF-1788973358673-529",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2350/qtl",
+      "message": "AgroCorp Foods Pvt Ltd placed an order for 50 qtl Paddy / धान (Common) for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": true,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-424"
+      },
+      "timestamp": "2026-09-09T17:02:38.673Z"
+    },
+    {
+      "id": "NOTIF-1788973358669-925",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-424",
+      "message": "Contract for 50 qtl Paddy / धान (Common) at ₹2350/qtl confirmed (Total ₹1,17,500). Gate pass #GP-2026-212 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-424",
+        "gatePassId": "GP-2026-212"
+      },
+      "timestamp": "2026-09-09T17:02:38.669Z"
+    },
+    {
+      "id": "NOTIF-1788973358573-437",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-059",
+      "message": "Ramesh Kumar scheduled 50 qtl Wheat / गेहूं arrival for Saturday, 12 September.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9996",
+        "token": "A-059"
+      },
+      "timestamp": "2026-09-09T17:02:38.573Z"
+    },
+    {
+      "id": "NOTIF-1788973358569-667",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-059",
+      "message": "Your Wheat / गेहूं delivery slot at Jaitpur Procurement Centre is confirmed for Saturday, 12 September (10:30 – 11:00 AM).",
+      "category": "slots",
+      "read": true,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9996",
+        "token": "A-059"
+      },
+      "timestamp": "2026-09-09T17:02:38.569Z"
+    },
+    {
+      "id": "NOTIF-1788963276041-418",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-323",
+      "message": "AgroCorp Foods Pvt Ltd booked 50 qtl Paddy / धान (Common) at Jaitpur Mandi (₹1,17,500). Gate Pass: GP-2026-146.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-323"
+      },
+      "timestamp": "2026-09-09T14:14:36.041Z"
+    },
+    {
+      "id": "NOTIF-1788963276037-229",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2350/qtl",
+      "message": "AgroCorp Foods Pvt Ltd placed an order for 50 qtl Paddy / धान (Common) for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": true,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-323"
+      },
+      "timestamp": "2026-09-09T14:14:36.037Z"
+    },
+    {
+      "id": "NOTIF-1788963276032-530",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-323",
+      "message": "Contract for 50 qtl Paddy / धान (Common) at ₹2350/qtl confirmed (Total ₹1,17,500). Gate pass #GP-2026-146 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-323",
+        "gatePassId": "GP-2026-146"
+      },
+      "timestamp": "2026-09-09T14:14:36.032Z"
+    },
+    {
+      "id": "NOTIF-1788963275916-784",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-058",
+      "message": "Ramesh Kumar scheduled 50 qtl Wheat / गेहूं arrival for Saturday, 12 September.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9224",
+        "token": "A-058"
+      },
+      "timestamp": "2026-09-09T14:14:35.916Z"
+    },
+    {
+      "id": "NOTIF-1788963275912-229",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-058",
+      "message": "Your Wheat / गेहूं delivery slot at Jaitpur Procurement Centre is confirmed for Saturday, 12 September (10:30 – 11:00 AM).",
+      "category": "slots",
+      "read": true,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9224",
+        "token": "A-058"
+      },
+      "timestamp": "2026-09-09T14:14:35.912Z"
+    },
+    {
+      "id": "NOTIF-1788960564300-283",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-415",
+      "message": "Vikram Singhania booked 120 qtl Paddy / धान (Common) at Jaitpur Mandi (₹2,83,200). Gate Pass: GP-2026-188.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-415"
+      },
+      "timestamp": "2026-09-09T13:29:24.300Z"
+    },
+    {
+      "id": "NOTIF-1788960564296-961",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2360/qtl",
+      "message": "Vikram Singhania placed an order for 120 qtl Paddy / धान (Common) for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": true,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-415"
+      },
+      "timestamp": "2026-09-09T13:29:24.296Z"
+    },
+    {
+      "id": "NOTIF-1788960564293-281",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-415",
+      "message": "Contract for 120 qtl Paddy / धान (Common) at ₹2360/qtl confirmed (Total ₹2,83,200). Gate pass #GP-2026-188 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-415",
+        "gatePassId": "GP-2026-188"
+      },
+      "timestamp": "2026-09-09T13:29:24.293Z"
+    },
+    {
+      "id": "NOTIF-1788960564221-792",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "PAYMENT_CREDITED",
+      "title": "DBT Payment Dispatched: ₹1,38,000",
+      "message": "Direct Benefit Transfer of ₹1,38,000 for Receipt #KR-2026-9534 was credited via PFMS. UTR: SBI605642109236.",
+      "category": "payments",
+      "read": true,
+      "link": "procurements",
+      "meta": {
+        "receiptId": "KR-2026-9534",
+        "utr": "SBI605642109236",
+        "amount": 138000
+      },
+      "timestamp": "2026-09-09T13:29:24.221Z"
+    },
+    {
+      "id": "NOTIF-1788960564195-414",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "WEIGHMENT_RECORDED",
+      "title": "J-Form Issued: #KR-2026-9534",
+      "message": "Weighed 60 qtl Paddy / धान (Common). Total payable: ₹1,38,000. DBT payment initiated.",
+      "category": "payments",
+      "read": true,
+      "link": "procurements",
+      "meta": {
+        "receiptId": "KR-2026-9534",
+        "netWeight": 60,
+        "amount": 138000
+      },
+      "timestamp": "2026-09-09T13:29:24.195Z"
+    },
+    {
+      "id": "NOTIF-1788960564159-354",
+      "userId": null,
+      "role": "all",
+      "type": "ADMIN_ALERT",
+      "title": "Mandi Delay Broadcast: Jaitpur Procurement Centre",
+      "message": "Unseasonal rain and wet grain assay delay. Operations are estimated to be delayed by approximately 45 minutes.",
+      "category": "alerts",
+      "read": true,
+      "link": "queue",
+      "meta": {
+        "delayMins": 45,
+        "centreId": "CTR-UP-01"
+      },
+      "timestamp": "2026-09-09T13:29:24.159Z"
+    },
+    {
+      "id": "NOTIF-1788960564083-256",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-057",
+      "message": "Ramesh Kumar scheduled 45 qtl Paddy / धान (Common) arrival for Saturday, 12 September.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9126",
+        "token": "A-057"
+      },
+      "timestamp": "2026-09-09T13:29:24.083Z"
+    },
+    {
+      "id": "NOTIF-1788960564078-317",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-057",
+      "message": "Your Paddy / धान (Common) delivery slot at Jaitpur Procurement Centre is confirmed for Saturday, 12 September (11:00 – 11:30 AM).",
+      "category": "slots",
+      "read": true,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9126",
+        "token": "A-057"
+      },
+      "timestamp": "2026-09-09T13:29:24.078Z"
+    },
+    {
+      "id": "NOTIF-1788960560043-652",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Mandi Procurement Order #BO-2026-455",
+      "message": "AgroCorp Foods Pvt Ltd booked 50 qtl Paddy / धान (Common) at Jaitpur Mandi (₹1,17,500). Gate Pass: GP-2026-512.",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "orderId": "BO-2026-455"
+      },
+      "timestamp": "2026-09-09T13:29:20.043Z"
+    },
+    {
+      "id": "NOTIF-1788960560038-594",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_BID_RECEIVED",
+      "title": "Buyer Offer Received: ₹2350/qtl",
+      "message": "AgroCorp Foods Pvt Ltd placed an order for 50 qtl Paddy / धान (Common) for Mandi delivery on 2026-09-15.",
+      "category": "marketplace",
+      "read": true,
+      "link": "dashboard",
+      "meta": {
+        "orderId": "BO-2026-455"
+      },
+      "timestamp": "2026-09-09T13:29:20.038Z"
+    },
+    {
+      "id": "NOTIF-1788960560032-254",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "BUYER_ORDER",
+      "title": "Order Confirmed: #BO-2026-455",
+      "message": "Contract for 50 qtl Paddy / धान (Common) at ₹2350/qtl confirmed (Total ₹1,17,500). Gate pass #GP-2026-512 issued.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "orderId": "BO-2026-455",
+        "gatePassId": "GP-2026-512"
+      },
+      "timestamp": "2026-09-09T13:29:20.032Z"
+    },
+    {
+      "id": "NOTIF-1788960559932-240",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booked: Token #A-056",
+      "message": "Ramesh Kumar scheduled 50 qtl Wheat / गेहूं arrival for Saturday, 12 September.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-9794",
+        "token": "A-056"
+      },
+      "timestamp": "2026-09-09T13:29:19.932Z"
+    },
+    {
+      "id": "NOTIF-1788960559927-299",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_CONFIRMED",
+      "title": "Slot Confirmed: Token #A-056",
+      "message": "Your Wheat / गेहूं delivery slot at Jaitpur Procurement Centre is confirmed for Saturday, 12 September (10:30 – 11:00 AM).",
+      "category": "slots",
+      "read": true,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-9794",
+        "token": "A-056"
+      },
+      "timestamp": "2026-09-09T13:29:19.927Z"
+    },
     {
       "id": "NOTIF-1788917528448-368",
       "userId": "APMC-ADMIN",

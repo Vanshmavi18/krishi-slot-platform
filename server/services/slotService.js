@@ -1,6 +1,7 @@
 // server/services/slotService.js
 import { db } from '../data/db.js';
 import { sendSms } from './smsService.js';
+import { sendEmail } from './emailService.js';
 import { createNotification } from './notificationService.js';
 
 const TIME_SLOTS = [
@@ -34,7 +35,7 @@ export function getAvailableSlots(centreId, date) {
   });
 }
 
-export async function bookSlot({ farmerId, farmerName, farmerPhone, centreId, cropId, quantity, vehicle, date, timeSlot }) {
+export async function bookSlot({ farmerId, farmerName, farmerPhone, farmerEmail, centreId, cropId, quantity, vehicle, date, timeSlot }) {
   const centre = db.find('centres', c => c.id === centreId);
   if (!centre) throw new Error('Selected procurement centre not found');
 
@@ -43,6 +44,13 @@ export async function bookSlot({ farmerId, farmerName, farmerPhone, centreId, cr
 
   if (!quantity || Number(quantity) <= 0) {
     throw new Error('Please enter a valid harvest quantity in quintals');
+  }
+
+  // Lookup farmer email from database if not explicitly passed
+  let resolvedEmail = (farmerEmail || '').trim().toLowerCase();
+  if (!resolvedEmail && farmerId) {
+    const user = db.find('users', u => u.id === farmerId);
+    if (user?.email) resolvedEmail = user.email.toLowerCase();
   }
 
   // Calculate next token for this centre
@@ -63,6 +71,7 @@ export async function bookSlot({ farmerId, farmerName, farmerPhone, centreId, cr
     farmerId,
     farmerName: farmerName || 'Farmer',
     farmerPhone: String(farmerPhone).slice(-10),
+    farmerEmail: resolvedEmail || null,
     centreId,
     centreName: centre.name,
     cropId,
@@ -97,6 +106,30 @@ export async function bookSlot({ farmerId, farmerName, farmerPhone, centreId, cr
       token
     }
   });
+
+  // Send real email confirmation if email exists
+  if (resolvedEmail && resolvedEmail.includes('@')) {
+    try {
+      await sendEmail({
+        to: resolvedEmail,
+        recipientName: farmerName,
+        type: 'SLOT_CONFIRMED',
+        data: {
+          token,
+          crop: crop.name,
+          centre: centre.name,
+          date: displayDate,
+          time: timeSlot,
+          vehicle: vehicle || 'Tractor Trolley',
+          quantity: Number(quantity),
+          bookingId
+        }
+      });
+      console.log(`[SLOT BOOKING] Real confirmation email dispatched to: ${resolvedEmail}`);
+    } catch (emailErr) {
+      console.warn('[SLOT BOOKING] Failed to dispatch email:', emailErr.message);
+    }
+  }
 
   // Create in-app notifications for Farmer and Mandi Admin
   try {

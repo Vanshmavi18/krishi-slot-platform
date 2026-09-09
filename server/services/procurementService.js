@@ -1,6 +1,7 @@
 // server/services/procurementService.js
 import { db } from '../data/db.js';
 import { sendSms } from './smsService.js';
+import { sendEmail } from './emailService.js';
 import { createNotification } from './notificationService.js';
 
 export function getProcurements(farmerId = null) {
@@ -18,6 +19,7 @@ export function getProcurementById(id) {
 }
 
 export async function createProcurement({
+  token,
   farmerId,
   bookingId,
   cropId = 'paddy_comm',
@@ -27,17 +29,32 @@ export async function createProcurement({
   centreId = 'CTR-UP-01',
   officerName = 'V. K. Verma'
 }) {
-  const farmer = db.find('users', u => u.id === farmerId) || {
-    id: farmerId || 'FRM-UP-26032',
-    name: 'Ramesh Kumar',
-    phone: '9876543210',
+  // If token is provided, look up associated booking
+  let matchedBooking = null;
+  if (token) {
+    const cleanToken = String(token).trim().toUpperCase();
+    matchedBooking = db.find('bookings', b => (b.token && b.token.toUpperCase() === cleanToken));
+  } else if (bookingId) {
+    matchedBooking = db.find('bookings', b => b.id === bookingId);
+  }
+
+  const effectiveFarmerId = matchedBooking?.farmerId || farmerId || 'FRM-UP-26032';
+  const effectiveBookingId = matchedBooking?.id || bookingId || null;
+  const effectiveCropId = matchedBooking?.cropId || cropId;
+  const effectiveCentreId = matchedBooking?.centreId || centreId;
+
+  const farmer = db.find('users', u => u.id === effectiveFarmerId) || {
+    id: effectiveFarmerId,
+    name: matchedBooking?.farmerName || 'Ramesh Kumar',
+    email: matchedBooking?.farmerEmail || null,
+    phone: matchedBooking?.farmerPhone || '9876543210',
     village: 'Jaitpur, Gorakhpur',
     bankName: 'State Bank of India',
     bankAccMasked: '•••• •••• 4862'
   };
 
-  const crop = db.find('crops', c => c.id === cropId) || db.get('crops')[0];
-  const centre = db.find('centres', c => c.id === centreId) || db.get('centres')[0];
+  const crop = db.find('crops', c => c.id === effectiveCropId) || db.get('crops')[0];
+  const centre = db.find('centres', c => c.id === effectiveCentreId) || db.get('centres')[0];
 
   const gross = parseFloat(grossWeight);
   const tare = parseFloat(tareWeight);
@@ -63,10 +80,12 @@ export async function createProcurement({
 
   const record = {
     id: receiptId,
-    bookingId: bookingId || null,
+    bookingId: effectiveBookingId,
+    token: matchedBooking?.token || token || 'A-047',
     farmerId: farmer.id,
     farmerName: farmer.name,
     farmerPhone: farmer.phone,
+    farmerEmail: farmer.email || matchedBooking?.farmerEmail || null,
     date: dateFormatted,
     crop: `${crop.name.split('/')[0].trim()} • ${net} qtl`,
     cropId: crop.id,
@@ -98,10 +117,21 @@ export async function createProcurement({
 
   db.insert('procurements', record);
 
-  // If bookingId was provided, update booking queue status
-  if (bookingId) {
-    db.update('bookings', b => b.id === bookingId, b => ({ ...b, status: 'COMPLETED', queueStatus: 'COMPLETED' }));
+  // If matched booking exists, update status
+  if (effectiveBookingId) {
+    db.update('bookings', b => b.id === effectiveBookingId, b => ({
+      ...b,
+      status: 'COMPLETED',
+      queueStatus: 'COMPLETED',
+      procurementId: receiptId
+    }));
   }
+
+  // Increment centre today completed count
+  db.update('centres', c => c.id === centre.id, c => ({
+    ...c,
+    todayCompleted: (c.todayCompleted || 0) + 1
+  }));
 
   // Send SMS weighment slip notification
   await sendSms({
@@ -116,6 +146,35 @@ export async function createProcurement({
       receiptId
     }
   });
+
+  // Send real J-Form receipt email if email is available
+  const farmerEmail = farmer.email || matchedBooking?.farmerEmail;
+  if (farmerEmail && farmerEmail.includes('@')) {
+    try {
+      await sendEmail({
+        to: farmerEmail,
+        recipientName: farmer.name,
+        type: 'JFORM_ISSUED',
+        data: {
+          name: farmer.name,
+          receiptId,
+          crop: crop.name,
+          grossWeight: gross,
+          tareWeight: tare,
+          netWeight: net,
+          mspRate: crop.mspRate,
+          amount: totalAmount,
+          centre: centre.name,
+          date: dateFormatted,
+          bankName: farmer.bankName || 'State Bank of India',
+          bankAccMasked: farmer.bankAccMasked || '•••• 4862'
+        }
+      });
+      console.log(`[JFORM DISPATCH] Real J-Form email dispatched to: ${farmerEmail}`);
+    } catch (e) {
+      console.warn('[JFORM DISPATCH] Failed to dispatch email:', e.message);
+    }
+  }
 
   try {
     createNotification({
@@ -165,6 +224,29 @@ export async function approvePayment(receiptId) {
       receiptId: p.id
     }
   });
+
+  // Send real email confirmation if email is available
+  const user = db.find('users', u => u.id === p.farmerId);
+  const farmerEmail = user?.email || p.farmerEmail;
+  if (farmerEmail && farmerEmail.includes('@')) {
+    try {
+      await sendEmail({
+        to: farmerEmail,
+        recipientName: p.farmerName,
+        type: 'PAYMENT_CREDITED',
+        data: {
+          name: p.farmerName,
+          amount: p.amount,
+          bank: p.bankName || 'State Bank of India',
+          utr,
+          receiptId: p.id
+        }
+      });
+      console.log(`[PAYMENT DISPATCH] Real DBT payment email dispatched to: ${farmerEmail}`);
+    } catch (e) {
+      console.warn('[PAYMENT DISPATCH] Failed to dispatch email:', e.message);
+    }
+  }
 
   try {
     createNotification({

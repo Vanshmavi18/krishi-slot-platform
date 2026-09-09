@@ -18,14 +18,20 @@ export function renderLiveQueue({ queueStatus, userToken, t }) {
     dailyCapacity: 90
   };
 
-  const token = userToken || 'A-047';
+  const hasToken = Boolean(userToken);
+  let tokenDiff = q.farmersAhead || 9;
+  if (hasToken) {
+    const userNum = parseInt(String(userToken).replace(/[^0-9]/g, ''), 10) || 0;
+    const nowNum = q.nowServingNumber || 38;
+    tokenDiff = Math.max(0, userNum - nowNum);
+  }
 
   return `
     <div class="page-container">
       <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end">
         <div>
           <h1 class="page-title">${t.queue.title}</h1>
-          <p class="page-subtitle">${q.centreName} • <span class="pulse-dot"></span> Sate-of-the-art Live Stream</p>
+          <p class="page-subtitle">${q.centreName} • <span class="pulse-dot"></span> Real-time Gate Telemetry</p>
         </div>
         <div>
           <button id="btn-simulate-queue" class="btn-secondary">
@@ -49,10 +55,17 @@ export function renderLiveQueue({ queueStatus, userToken, t }) {
             <div class="position-icon">📍</div>
             <div style="flex:1">
               <span style="font-size:12px;color:#4b5d50;font-weight:700;letter-spacing:0.04em">${t.queue.expectedPosition}</span>
-              <div style="display:flex;align-items:baseline;gap:10px">
-                <strong>#${token}</strong>
-                <span style="font-size:14px;color:#15803d;font-weight:700">• ${q.farmersAhead} ${t.queue.ahead}</span>
-              </div>
+              ${hasToken ? `
+                <div style="display:flex;align-items:baseline;gap:10px">
+                  <strong>#${userToken}</strong>
+                  <span style="font-size:14px;color:#15803d;font-weight:700">• ${tokenDiff} ${t.queue.ahead}</span>
+                </div>
+              ` : `
+                <div style="display:flex;align-items:center;gap:10px;margin-top:2px">
+                  <span style="font-weight:700;font-size:15px;color:#0f2e1b">No Active Slot Booked</span>
+                  <span style="font-size:12px;color:#6b7280">• Book a slot to join the live gate queue</span>
+                </div>
+              `}
             </div>
           </div>
 

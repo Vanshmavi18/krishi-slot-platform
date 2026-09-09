@@ -14,20 +14,20 @@ async function runAll() {
   }).then(r => r.json());
   console.log('✓ Staff Login:', staffLogin.success, `Role: ${staffLogin.user.role}, Name: ${staffLogin.user.name}`);
 
-  // 3. Farmer OTP Flow
-  const otpRes = await fetch('http://localhost:5000/api/auth/send-otp', {
+  // 3. Farmer Email OTP Flow
+  const otpRes = await fetch('http://localhost:5000/api/auth/send-email-otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: '9876543210' })
+    body: JSON.stringify({ email: 'ramesh.farmer@krishislot.in' })
   }).then(r => r.json());
-  console.log('✓ OTP Dispatched via SMS Simulator:', otpRes.success, 'Code:', otpRes.demoOtp);
+  console.log('✓ OTP Dispatched via Email Service:', otpRes.success, 'Code:', otpRes.demoOtp);
 
-  const verifyRes = await fetch('http://localhost:5000/api/auth/verify-otp', {
+  const verifyRes = await fetch('http://localhost:5000/api/auth/verify-email-otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone: '9876543210', otp: otpRes.demoOtp })
+    body: JSON.stringify({ email: 'ramesh.farmer@krishislot.in', otp: otpRes.demoOtp })
   }).then(r => r.json());
-  console.log('✓ OTP Verified:', verifyRes.success, 'Farmer:', verifyRes.user.name);
+  console.log('✓ Email OTP Verified:', verifyRes.success, 'Farmer:', verifyRes.user.name);
   const farmerToken = verifyRes.token;
 
   // 4. Slots & Booking
