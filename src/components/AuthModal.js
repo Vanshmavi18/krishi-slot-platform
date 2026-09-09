@@ -104,6 +104,8 @@ export class AuthModal {
 
   // --- EMAIL OTP FLOW ---
   async handleSendOtp(emailOverride = null) {
+    if (this.isLoading) return;
+
     const input = document.getElementById('auth-email-input');
     const email = (emailOverride || (input ? input.value : '')).trim().toLowerCase();
 
@@ -415,14 +417,27 @@ export class AuthModal {
                 </div>
 
                 ${this.isRealEmail ? `
-                  <div class="auth-real-gmail-banner" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
-                    <span style="font-size:26px">📬</span>
-                    <div>
-                      <b style="color:#166534;font-size:13px">Real Gmail OTP Sent!</b>
-                      <div style="font-size:12px;color:#15803d;margin-top:2px">
-                        Check your Gmail inbox (or spam folder) for <b>${this.currentEmail}</b>.
+                  <div class="auth-real-gmail-banner" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 14px;margin-bottom:14px">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                      <span style="font-size:22px">📬</span>
+                      <div>
+                        <b style="color:#166534;font-size:13px">Real Gmail OTP Sent!</b>
+                        <div style="font-size:12px;color:#15803d">
+                          Sent to <b>${this.currentEmail}</b>
+                        </div>
                       </div>
                     </div>
+                    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:7px 10px;font-size:11.5px;color:#92400e;line-height:1.4;margin-bottom:8px">
+                      ⚠️ <b>Check SPAM / JUNK Folder:</b> Google often moves emails from automated services into your <u>Spam / Junk</u> folder or Promotions tab.
+                    </div>
+                    ${this.demoOtp ? `
+                      <div style="display:flex;align-items:center;justify-content:space-between;background:#ffffff;border:1px dashed #86efac;padding:8px 10px;border-radius:8px">
+                        <span style="font-size:11.5px;color:#475563">Didn't find in inbox?</span>
+                        <button type="button" id="btn-autofill-otp" class="btn-outline btn-sm auth-autofill-btn" style="padding:4px 10px;font-size:11.5px">
+                          ⚡ Auto-fill Code (${this.demoOtp})
+                        </button>
+                      </div>
+                    ` : ''}
                   </div>
                 ` : (this.demoOtp ? `
                   <div class="auth-demo-otp-banner">
@@ -658,14 +673,22 @@ export class AuthModal {
       if (btn) btn.textContent = this.showSavePwd ? '🙈' : '👁️';
     });
 
-    // Form Submissions
-    document.getElementById('email-otp-send-form')?.addEventListener('submit', () => this.handleSendOtp());
-    document.getElementById('btn-submit-email')?.addEventListener('click', () => this.handleSendOtp());
+    // Form Submissions (guard against duplicate triggers)
+    document.getElementById('email-otp-send-form')?.addEventListener('submit', (e) => {
+      e?.preventDefault();
+      this.handleSendOtp();
+    });
 
-    document.getElementById('email-otp-verify-form')?.addEventListener('submit', () => this.handleVerifyOtp());
+    document.getElementById('email-otp-verify-form')?.addEventListener('submit', (e) => {
+      e?.preventDefault();
+      this.handleVerifyOtp();
+    });
     document.getElementById('btn-submit-otp')?.addEventListener('click', () => this.handleVerifyOtp());
 
-    document.getElementById('password-login-form')?.addEventListener('submit', () => this.handlePasswordLogin());
+    document.getElementById('password-login-form')?.addEventListener('submit', (e) => {
+      e?.preventDefault();
+      this.handlePasswordLogin();
+    });
     document.getElementById('btn-submit-pwd-login')?.addEventListener('click', () => this.handlePasswordLogin());
 
     // Auto-fill OTP

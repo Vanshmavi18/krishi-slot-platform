@@ -111,8 +111,8 @@ function getTransporter() {
 
 export const EMAIL_TEMPLATES = {
   OTP: ({ name, otp, expiresInMins = 10 }) => ({
-    subject: `🌱 ${otp} is your KrishiSlot APMC Verification Code`,
-    text: `Namaste ${name || 'Farmer Friend'},\n\nYour KrishiSlot login verification OTP is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nAgricultural Produce Market Committee (APMC)\nKrishiSlot Platform • Smart Mandi Procurement`,
+    subject: `Your KrishiSlot Verification Code: ${otp}`,
+    text: `Namaste ${name || 'Farmer Friend'},\n\nYour KrishiSlot login verification OTP is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nKrishiSlot Smart Mandi & APMC Procurement Platform`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -124,9 +124,8 @@ export const EMAIL_TEMPLATES = {
         <div style="max-width:540px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.06)">
           <!-- Header Banner -->
           <div style="background:linear-gradient(135deg, #15803d 0%, #0f4324 100%);padding:28px 24px;text-align:center;color:#ffffff">
-            <div style="font-size:42px;margin-bottom:6px">🌱</div>
-            <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em">KrishiSlot APMC Portal</h1>
-            <p style="margin:6px 0 0;font-size:13px;opacity:0.9;font-weight:500">Government Smart Mandi & Procurement Platform</p>
+            <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em">KrishiSlot Platform</h1>
+            <p style="margin:6px 0 0;font-size:13px;opacity:0.9;font-weight:500">Smart APMC Mandi Procurement Portal</p>
           </div>
 
           <!-- Body -->
@@ -138,13 +137,13 @@ export const EMAIL_TEMPLATES = {
 
             <!-- OTP Card -->
             <div style="background:#f0fdf4;border:2px dashed #86efac;border-radius:14px;padding:22px 16px;text-align:center;margin-bottom:24px">
-              <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;color:#166534;text-transform:uppercase;display:block;margin-bottom:8px">One-Time Verification Password (OTP)</span>
+              <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;color:#166534;text-transform:uppercase;display:block;margin-bottom:8px">One-Time Verification Code (OTP)</span>
               <div style="font-size:38px;letter-spacing:0.3em;color:#15803d;font-weight:800;font-family:monospace;margin:4px 0">${otp}</div>
               <span style="font-size:12px;color:#16a34a;display:inline-block;margin-top:6px;font-weight:600">⏱️ Valid for ${expiresInMins} minutes</span>
             </div>
 
             <div style="background:#f8fafc;border-left:4px solid #15803d;padding:12px 14px;border-radius:6px;margin-bottom:20px;font-size:12.5px;color:#334155;line-height:1.5">
-              🔒 <b>Security Note:</b> Never share this code or your account password with anyone. Mandi officials or APMC personnel will never ask for your OTP.
+              🔒 <b>Security Note:</b> Never share this code with anyone. KrishiSlot support will never ask for your OTP.
             </div>
 
             <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.5">
@@ -153,8 +152,8 @@ export const EMAIL_TEMPLATES = {
 
             <!-- Footer -->
             <div style="border-top:1px solid #f1f5f9;margin-top:24px;padding-top:18px;font-size:11px;color:#94a3b8;text-align:center;line-height:1.6">
-              Agricultural Produce Market Committee (APMC) • Government of India<br>
-              National Agriculture Market & Direct Benefit Transfer (DBT) • SIH 2026
+              Agricultural Produce Market Committee (APMC) • KrishiSlot Portal<br>
+              Smart Mandi & Direct Benefit Transfer
             </div>
           </div>
         </div>
@@ -350,13 +349,20 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
 
   if (transporter && config) {
     try {
-      const fromAddress = `"KrishiSlot APMC Portal" <${config.user}>`;
+      const fromAddress = `"KrishiSlot Verification" <${config.user}>`;
       const info = await transporter.sendMail({
         from: fromAddress,
         to: cleanEmail,
+        replyTo: config.user,
         subject: templateContent.subject,
         text: templateContent.text,
-        html: templateContent.html
+        html: templateContent.html,
+        priority: 'high',
+        headers: {
+          'X-Priority': '1',
+          'Importance': 'high',
+          'X-Mailer': 'KrishiSlot Auth Service'
+        }
       });
 
       emailRecord.status = 'SENT';

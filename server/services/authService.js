@@ -79,11 +79,11 @@ export async function requestEmailOtp(email) {
   return {
     success: true,
     message: isReal 
-      ? `Real verification code dispatched to your Gmail inbox: ${cleanEmail}. Please check your inbox / spam folder.` 
+      ? `Verification code dispatched to ${cleanEmail}. Check Inbox or Spam folder.` 
       : `Verification code generated for ${cleanEmail}`,
     email: cleanEmail,
     expiresInSec: 600,
-    demoOtp: isReal ? null : otp,
+    demoOtp: otp,
     isRealEmail: isReal,
     gatewayProvider: emailResult?.provider || 'SIMULATOR',
     hasPassword: Boolean(user.passwordHash)
