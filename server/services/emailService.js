@@ -14,8 +14,12 @@ const dispatchedEmails = [];
 // Helper to get active email credentials
 export function getEmailGatewayConfig() {
   dotenv.config();
-  const gmailUser = (process.env.GMAIL_USER || '').trim();
-  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '').trim();
+  // Cloud deployment fallbacks (Render/Heroku/Vercel)
+  const defaultUser = 'vanshmavi018@gmail.com';
+  const defaultPass = 'vqvtnvteehvucjud';
+
+  const gmailUser = (process.env.GMAIL_USER || defaultUser).trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || defaultPass).replace(/\s+/g, '').trim();
 
   const smtpUser = (process.env.SMTP_USER || '').trim();
   const smtpPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '').trim();
