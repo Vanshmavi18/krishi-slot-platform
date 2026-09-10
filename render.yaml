@@ -19,3 +19,7 @@ services:
         value: vanshmavi018@gmail.com
       - key: GMAIL_APP_PASSWORD
         value: vqvtnvteehvucjud
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false

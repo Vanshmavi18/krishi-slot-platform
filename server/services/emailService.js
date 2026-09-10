@@ -404,6 +404,87 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
     isReal: false
   };
 
+  // 1. Priority: HTTP-based REST Email Gateway (Over HTTPS Port 443 - NEVER blocked by cloud/Render firewalls)
+  const resendKey = (process.env.RESEND_API_KEY || '').trim();
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+
+  if (resendKey) {
+    try {
+      console.log(`[EMAIL GATEWAY] Dispatching via Resend HTTPS API (Port 443) to ${cleanEmail}...`);
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM || 'KrishiSlot <onboarding@resend.dev>',
+          to: [cleanEmail],
+          subject: templateContent.subject,
+          html: templateContent.html,
+          text: templateContent.text
+        })
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.message || resData.error || 'Resend HTTP API failed');
+
+      emailRecord.status = 'SENT';
+      emailRecord.provider = 'RESEND_HTTPS';
+      emailRecord.messageId = resData.id;
+      emailRecord.isReal = true;
+      console.log(`\n[REAL RESEND DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (ID: ${resData.id})\n`);
+
+      if (data?.otp) {
+        console.log(`🔑 [OTP DISPATCH] Destination: ${cleanEmail} | Verification Code: ${data.otp} | Real Email Sent: true\n`);
+      }
+      dispatchedEmails.unshift(emailRecord);
+      if (dispatchedEmails.length > 50) dispatchedEmails.pop();
+      emailEvents.emit('email_sent', emailRecord);
+      return emailRecord;
+    } catch (httpErr) {
+      console.warn('[RESEND WARNING] Failed via Resend HTTPS API:', httpErr.message);
+    }
+  }
+
+  if (brevoKey) {
+    try {
+      console.log(`[EMAIL GATEWAY] Dispatching via Brevo HTTPS API (Port 443) to ${cleanEmail}...`);
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': brevoKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'KrishiSlot', email: process.env.BREVO_SENDER || 'vanshmavi018@gmail.com' },
+          to: [{ email: cleanEmail, name: recipientName }],
+          subject: templateContent.subject,
+          htmlContent: templateContent.html,
+          textContent: templateContent.text
+        })
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.message || 'Brevo HTTP API failed');
+
+      emailRecord.status = 'SENT';
+      emailRecord.provider = 'BREVO_HTTPS';
+      emailRecord.messageId = resData.messageId;
+      emailRecord.isReal = true;
+      console.log(`\n[REAL BREVO DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (ID: ${resData.messageId})\n`);
+
+      if (data?.otp) {
+        console.log(`🔑 [OTP DISPATCH] Destination: ${cleanEmail} | Verification Code: ${data.otp} | Real Email Sent: true\n`);
+      }
+      dispatchedEmails.unshift(emailRecord);
+      if (dispatchedEmails.length > 50) dispatchedEmails.pop();
+      emailEvents.emit('email_sent', emailRecord);
+      return emailRecord;
+    } catch (httpErr) {
+      console.warn('[BREVO WARNING] Failed via Brevo HTTPS API:', httpErr.message);
+    }
+  }
+
+  // 2. Fallback: Direct SMTP (Port 465 / 587)
   const { primary, fallback } = await getTransporters();
   const config = getEmailGatewayConfig();
 
