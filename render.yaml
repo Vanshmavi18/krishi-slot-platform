@@ -21,5 +21,7 @@ services:
         value: vqvtnvteehvucjud
       - key: RESEND_API_KEY
         sync: false
+      - key: RESEND_FROM
+        value: KrishiSlot <onboarding@resend.dev>
       - key: BREVO_API_KEY
         sync: false

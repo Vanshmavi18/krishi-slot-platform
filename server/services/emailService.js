@@ -68,7 +68,7 @@ export function getEmailGatewayStatus() {
     return {
       configured: true,
       gatewayType: 'RESEND_HTTPS',
-      senderEmail: process.env.RESEND_FROM || 'onboarding@resend.dev'
+      senderEmail: process.env.RESEND_FROM || 'KrishiSlot <onboarding@resend.dev>'
     };
   }
 
@@ -429,7 +429,7 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
       console.log(`[EMAIL GATEWAY] Dispatching via Resend SDK (HTTPS Port 443) to ${cleanEmail}...`);
       const resendClient = new Resend(process.env.RESEND_API_KEY || resendKey);
       const resendResponse = await resendClient.emails.send({
-        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+        from: process.env.RESEND_FROM || 'KrishiSlot <onboarding@resend.dev>',
         to: cleanEmail,
         subject: templateContent.subject,
         html: templateContent.html,

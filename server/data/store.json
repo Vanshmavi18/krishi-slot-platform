@@ -131,6 +131,20 @@
   ],
   "users": [
     {
+      "id": "FRM-UP-51197",
+      "role": "farmer",
+      "name": "Farmer Vk6495221",
+      "email": "vk6495221@gmail.com",
+      "phone": "9882298539",
+      "village": "Gorakhpur, Uttar Pradesh",
+      "aadhaarMasked": "•••• •••• 5756",
+      "bankName": "State Bank of India",
+      "bankAccMasked": "•••• •••• 1365",
+      "ifsc": "SBIN0001248",
+      "landAcres": 3.5,
+      "khasraNumber": "112/1"
+    },
+    {
       "id": "FRM-UP-82657",
       "role": "farmer",
       "name": "Farmer Vanshmavi018",
