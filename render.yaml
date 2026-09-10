@@ -13,6 +13,8 @@ services:
         value: production
       - key: JWT_SECRET
         generateValue: true
+      - key: NODE_OPTIONS
+        value: --dns-result-order=ipv4first
       - key: GMAIL_USER
         value: vanshmavi018@gmail.com
       - key: GMAIL_APP_PASSWORD

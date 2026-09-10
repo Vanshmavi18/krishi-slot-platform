@@ -4,6 +4,14 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Force IPv4 resolution for cloud platforms (Render/AWS/Heroku) where IPv6 routes are unreachable
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {
+  // Ignored if older Node
+}
 
 import authRoutes from './routes/authRoutes.js';
 import slotRoutes from './routes/slotRoutes.js';

@@ -2,6 +2,12 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { EventEmitter } from 'events';
+import dns from 'dns';
+
+// Force IPv4 resolution first across all Node sockets (crucial for Render/cloud deployment to prevent ENETUNREACH on IPv6)
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (e) {}
 
 // Load .env variables
 dotenv.config();
@@ -58,41 +64,60 @@ export function getEmailGatewayStatus() {
   };
 }
 
-// Create cached transporter
-let transporterInstance = null;
+// Cached Dual Transporters (Port 465 SSL + Port 587 STARTTLS with forced IPv4)
+let primaryTransporter = null;
+let fallbackTransporter = null;
 let lastConfigHash = '';
 
-function getTransporter() {
+export function getTransporters() {
   const config = getEmailGatewayConfig();
-  if (!config) return null;
+  if (!config) return { primary: null, fallback: null };
 
   const configHash = `${config.type}:${config.user}:${config.pass}:${config.host}:${config.port}`;
-  if (transporterInstance && lastConfigHash === configHash) {
-    return transporterInstance;
+  if (primaryTransporter && lastConfigHash === configHash) {
+    return { primary: primaryTransporter, fallback: fallbackTransporter };
   }
 
   try {
     if (config.type === 'GMAIL') {
-      transporterInstance = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
+      const baseOptions = {
         auth: {
           user: config.user,
           pass: config.pass
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 8000,
-        socketTimeout: 15000
+        family: 4, // CRITICAL: forces IPv4 to prevent ENETUNREACH on Render/Docker
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
+        connectionTimeout: 8000,
+        greetingTimeout: 6000,
+        socketTimeout: 12000
+      };
+
+      // Primary: SSL port 465 with forced IPv4
+      primaryTransporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        ...baseOptions
+      });
+
+      // Fallback: STARTTLS port 587 with forced IPv4
+      fallbackTransporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        tls: {
+          rejectUnauthorized: false
+        },
+        ...baseOptions
       });
     } else {
-      transporterInstance = nodemailer.createTransport({
+      primaryTransporter = nodemailer.createTransport({
         host: config.host,
         port: config.port,
         secure: config.secure,
+        family: 4,
         pool: true,
         maxConnections: 5,
         maxMessages: 100,
@@ -107,15 +132,21 @@ function getTransporter() {
           rejectUnauthorized: false
         }
       });
+      fallbackTransporter = primaryTransporter;
     }
 
     lastConfigHash = configHash;
-    console.log(`[EMAIL GATEWAY] Connected to SSL ${config.host}:${config.port} (${config.user})`);
-    return transporterInstance;
+    console.log(`[EMAIL GATEWAY] Connected to IPv4 SMTP transports (Port 465 + Port 587 fallback) for ${config.user}`);
+    return { primary: primaryTransporter, fallback: fallbackTransporter };
   } catch (err) {
-    console.error('[EMAIL GATEWAY ERROR] Failed to initialize transporter:', err.message);
-    return null;
+    console.error('[EMAIL GATEWAY ERROR] Failed to initialize transporters:', err.message);
+    return { primary: null, fallback: null };
   }
+}
+
+export function getTransporter() {
+  const { primary } = getTransporters();
+  return primary;
 }
 
 export const EMAIL_TEMPLATES = {
@@ -356,10 +387,10 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
     isReal: false
   };
 
-  const transporter = getTransporter();
+  const { primary, fallback } = getTransporters();
   const config = getEmailGatewayConfig();
 
-  if (transporter && config) {
+  if (primary && config) {
     const fromAddress = `"KrishiSlot" <${config.user}>`;
     const mailOptions = {
       from: fromAddress,
@@ -376,21 +407,35 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
       }
     };
 
-    try {
-      console.log(`[EMAIL GATEWAY] Sending live email via SSL 465 to ${cleanEmail}...`);
-      const info = await transporter.sendMail(mailOptions);
+    let info = null;
+    let usedPort = 465;
 
+    try {
+      console.log(`[EMAIL GATEWAY] Sending live email via IPv4 SSL 465 to ${cleanEmail}...`);
+      info = await primary.sendMail(mailOptions);
+    } catch (err465) {
+      console.warn(`[EMAIL GATEWAY] Port 465 attempt failed: ${err465.message}. Retrying via Port 587 STARTTLS (IPv4)...`);
+      try {
+        if (fallback) {
+          usedPort = 587;
+          info = await fallback.sendMail(mailOptions);
+        } else {
+          throw err465;
+        }
+      } catch (err587) {
+        console.error(`\n[GMAIL SMTP ERROR] Both Port 465 and Port 587 failed for ${cleanEmail}:`, err587.message);
+        emailRecord.status = 'FAILED';
+        emailRecord.providerError = err587.message;
+        emailRecord.isReal = false;
+      }
+    }
+
+    if (info) {
       emailRecord.status = 'SENT';
       emailRecord.provider = 'GMAIL_REAL';
       emailRecord.messageId = info.messageId;
       emailRecord.isReal = true;
-
-      console.log(`\n[REAL GMAIL DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (MessageId: ${info.messageId}) (Server: ${info.response})\n`);
-    } catch (err) {
-      console.error(`\n[GMAIL SMTP ERROR] Failed to send email to ${cleanEmail}:`, err.message);
-      emailRecord.status = 'FAILED';
-      emailRecord.providerError = err.message;
-      emailRecord.isReal = false;
+      console.log(`\n[REAL GMAIL DISPATCH SUCCESS] -> Sent to: ${cleanEmail} via Port ${usedPort} (MessageId: ${info.messageId}) (Server: ${info.response})\n`);
     }
   } else {
     console.log(`\n[VIRTUAL EMAIL DISPATCH] -> To: ${cleanEmail}`);
