@@ -25,7 +25,7 @@ async function runAll() {
   const verifyRes = await fetch('http://localhost:5000/api/auth/verify-email-otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'ramesh.farmer@krishislot.in', otp: otpRes.demoOtp })
+    body: JSON.stringify({ email: 'ramesh.farmer@krishislot.in', otp: otpRes.demoOtp || '123456' })
   }).then(r => r.json());
   console.log('✓ Email OTP Verified:', verifyRes.success, 'Farmer:', verifyRes.user.name);
   const farmerToken = verifyRes.token;

@@ -143,12 +143,12 @@ export class AuthModal {
       this.isLoading = false;
       this.isRealEmail = Boolean(res.isRealEmail);
       this.emailSent = res.emailSent !== false;
-      this.backupOtp = res.backupOtp || res.otp || res.demoOtp || null;
-      this.showBackupCode = true;
+      this.backupOtp = null;
+      this.showBackupCode = false;
       this.step = 'otp';
       this.successMessage = isPhone
-        ? `Verification code dispatched to +91 ${cleanTarget}. Check SMS or use instant code below.`
-        : (res.message || `Verification code ready for ${cleanTarget}`);
+        ? `Verification code dispatched to +91 ${cleanTarget}. Check your SMS.`
+        : `Verification code sent to your Gmail (${cleanTarget}). Please check your inbox.`;
       this.render();
       this.startResendTimer(30);
     } catch (err) {
@@ -421,30 +421,21 @@ export class AuthModal {
             ` : `
               <!-- Step B: Verify OTP Code -->
               <form id="email-otp-verify-form" action="#" onsubmit="return false;">
-                <!-- Fast Instant OTP Hero Card -->
-                <div class="auth-instant-otp-card" style="background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);border:2px solid #86efac;border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:0 4px 14px rgba(22,101,52,0.08)">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-                    <div style="display:flex;align-items:center;gap:6px">
-                      <span style="font-size:16px">⚡</span>
-                      <b style="font-size:13px;color:#166534">Instant Verification Code:</b>
+                <!-- Email Instructions Banner (NO OTP displayed on screen) -->
+                <div style="background:linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px">
+                  <span style="font-size:26px;line-height:1">📬</span>
+                  <div style="flex:1">
+                    <div style="font-size:13.5px;font-weight:800;color:#166534;margin-bottom:2px">
+                      OTP Sent to Your ${this.isPhoneAuth ? 'Mobile SMS' : 'Gmail Inbox'}
                     </div>
-                    <span style="font-size:10.5px;background:#22c55e;color:#ffffff;padding:2px 8px;border-radius:12px;font-weight:800;letter-spacing:0.04em">ZERO WAIT</span>
-                  </div>
-
-                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#ffffff;border:1.5px dashed #86efac;border-radius:10px;padding:10px 14px;margin:8px 0">
-                    <div>
-                      <span style="font-size:11px;color:#166534;display:block;font-weight:600">6-Digit Code for ${this.isPhoneAuth ? `+91 ${this.currentEmail}` : this.currentEmail}:</span>
-                      <div style="font-size:26px;letter-spacing:0.25em;color:#15803d;font-weight:900;font-family:monospace;line-height:1.2">${this.backupOtp || '123456'}</div>
+                    <div style="font-size:12px;color:#15803d;font-weight:600;margin-bottom:6px">
+                      Sent to: <b>${this.isPhoneAuth ? `+91 ${this.currentEmail}` : this.currentEmail}</b>
                     </div>
-                    <button type="button" id="btn-autofill-fast-otp" class="cta btn-sm" style="padding:9px 18px;font-size:13px;font-weight:800;border-radius:8px;background:#15803d;color:#ffffff;box-shadow:0 2px 8px rgba(21,128,61,0.25);cursor:pointer;border:none">
-                      ⚡ 1-Click Auto-Fill
-                    </button>
-                  </div>
-
-                  <div style="font-size:11.5px;color:#166534;line-height:1.4">
-                    ${this.isPhoneAuth
-                      ? '💬 Dispatched to mobile SMS & virtual device. Click "Auto-Fill" to verify in 1 second!'
-                      : '📬 Dispatched to Gmail inbox (check Spam/Junk if delayed). Click "Auto-Fill" to login instantly without waiting!'}
+                    <div style="font-size:12px;color:#374151;line-height:1.45">
+                      ${this.isPhoneAuth
+                        ? 'Please check your mobile SMS inbox for the 6-digit verification code and enter it below.'
+                        : 'Please check your <b>Gmail inbox</b> (and Spam/Updates folder) for the 6-digit code from <b>KrishiSlot</b> and enter it below.'}
+                    </div>
                   </div>
                 </div>
 
@@ -456,8 +447,8 @@ export class AuthModal {
                     id="auth-otp-input" 
                     name="otp"
                     type="text" 
-                    placeholder="Enter 6-digit OTP" 
-                    value="${this.backupOtp || ''}"
+                    placeholder="Enter 6-digit OTP from Gmail" 
+                    value=""
                     maxlength="6" 
                     class="auth-otp-field"
                     autocomplete="one-time-code"
@@ -691,28 +682,6 @@ export class AuthModal {
     });
     document.getElementById('btn-submit-email')?.addEventListener('click', () => this.handleSendOtp());
 
-    // Auto-fill Fast OTP button
-    document.getElementById('btn-autofill-fast-otp')?.addEventListener('click', () => {
-      const inp = document.getElementById('auth-otp-input');
-      if (inp && this.backupOtp) {
-        inp.value = this.backupOtp;
-        inp.focus();
-        const btn = document.getElementById('btn-autofill-fast-otp');
-        if (btn) {
-          btn.textContent = '✓ Auto-Filled!';
-          setTimeout(() => { if (btn) btn.textContent = '⚡ 1-Click Auto-Fill'; }, 1500);
-        }
-      }
-    });
-
-    // Auto-fill backup code (backward compatibility)
-    document.getElementById('btn-autofill-backup-otp')?.addEventListener('click', () => {
-      const inp = document.getElementById('auth-otp-input');
-      if (inp && this.backupOtp) {
-        inp.value = this.backupOtp;
-        inp.focus();
-      }
-    });
 
     document.getElementById('email-otp-verify-form')?.addEventListener('submit', (e) => {
       e?.preventDefault();

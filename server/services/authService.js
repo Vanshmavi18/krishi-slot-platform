@@ -89,9 +89,9 @@ export async function requestEmailOtp(emailOrPhone) {
 
   let responseMessage = '';
   if (emailSent && isReal) {
-    responseMessage = `Verification code dispatched to your Gmail inbox (${cleanEmail}). Use code below or check inbox/spam.`;
+    responseMessage = `Verification code sent to your Gmail inbox (${cleanEmail}). Please check your inbox.`;
   } else if (emailResult?.providerError) {
-    responseMessage = `Email dispatch queued. Fast verification code ready below.`;
+    responseMessage = `Email dispatch error: ${emailResult.providerError}. Please try again.`;
   } else {
     responseMessage = `Verification code dispatched for ${cleanEmail}.`;
   }
@@ -102,9 +102,6 @@ export async function requestEmailOtp(emailOrPhone) {
     email: cleanEmail,
     phone: user.phone,
     expiresInSec: 600,
-    otp,
-    demoOtp: otp,
-    backupOtp: otp,
     emailSent,
     isRealEmail: isReal && emailSent,
     gatewayProvider: emailResult?.provider || 'SIMULATOR',
@@ -456,9 +453,6 @@ export async function requestOtp(phoneOrEmail) {
     phone: cleanPhone,
     email: user.email,
     expiresInSec: 600,
-    otp,
-    demoOtp: otp,
-    backupOtp: otp,
     smsSent: true,
     isRealSms: Boolean(smsResult?.gateway === 'FAST2SMS_REAL'),
     hasPassword: Boolean(user.passwordHash)
