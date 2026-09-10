@@ -6,22 +6,22 @@ export const smsEvents = new EventEmitter();
 
 export const TEMPLATES = {
   OTP: ({ otp, name }) => 
-    `कृषि स्लॉट (KrishiSlot) सत्यापन कोड: ${otp} है। यह OTP 10 मिनट के लिए मान्य है। कृपया इसे किसी के साथ साझा न करें। - APMC KRISHI`,
+    `एग्रीक्यू (AgriQueue) सत्यापन कोड: ${otp} है। यह OTP 10 मिनट के लिए मान्य है। कृपया इसे किसी के साथ साझा न करें। - APMC AGRIQUEUE`,
 
   SLOT_CONFIRMED: ({ name, crop, centre, date, time, token }) =>
-    `प्रिय ${name}, आपका ${crop} खरीद स्लॉट ${centre} पर ${date} (${time}) के लिए कन्फर्म हो गया है। आपका टोकन #${token} है। कृपया समय से 15 मिनट पहले पहुंचें। - KrishiSlot`,
+    `प्रिय ${name}, आपका ${crop} खरीद स्लॉट ${centre} पर ${date} (${time}) के लिए कन्फर्म हो गया है। आपका टोकन #${token} है। कृपया समय से 15 मिनट पहले पहुंचें। - AgriQueue`,
 
   QUEUE_PROXIMITY: ({ name, token, centre, counter, ahead }) =>
-    `⚠️ जरूरी सूचना: प्रिय ${name}, आपके टोकन #${token} के आगे केवल ${ahead} किसान बाकी हैं। कृपया तुरंत ${centre} के काउंटर ${counter} पर रिपोर्ट करें। - KrishiSlot`,
+    `⚠️ जरूरी सूचना: प्रिय ${name}, आपके टोकन #${token} के आगे केवल ${ahead} किसान बाकी हैं। कृपया तुरंत ${centre} के काउंटर ${counter} पर रिपोर्ट करें। - AgriQueue`,
 
   WEIGHMENT_SLIP: ({ name, crop, netWeight, amount, receiptId }) =>
-    `प्रिय ${name}, आपकी ${crop} की कुल ${netWeight} क्विंटल तुलाई पूरी हुई। कुल देय राशि: ₹${amount.toLocaleString('en-IN')}। डिजिटल रसीद #${receiptId} जारी की गई है। - KrishiSlot`,
+    `प्रिय ${name}, आपकी ${crop} की कुल ${netWeight} क्विंटल तुलाई पूरी हुई। कुल देय राशि: ₹${amount.toLocaleString('en-IN')}। डिजिटल रसीद #${receiptId} जारी की गई है। - AgriQueue`,
 
   PAYMENT_CREDITED: ({ name, amount, bank, utr, receiptId }) =>
-    `प्रिय ${name}, रसीद #${receiptId} के लिए ₹${amount.toLocaleString('en-IN')} की DBT राशि आपके ${bank} खाते में जमा कर दी गई है। UTR संख्या: ${utr}। - KrishiSlot DBT`,
+    `प्रिय ${name}, रसीद #${receiptId} के लिए ₹${amount.toLocaleString('en-IN')} की DBT राशि आपके ${bank} खाते में जमा कर दी गई है। UTR संख्या: ${utr}। - AgriQueue DBT`,
 
   BROADCAST_DELAY: ({ centre, reason, delayMins }) =>
-    `सूचना: ${centre} पर ${reason || 'तकनीकी कारण'} के चलते स्लॉट लगभग ${delayMins || 45} मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - KrishiSlot APMC`
+    `सूचना: ${centre} पर ${reason || 'तकनीकी कारण'} के चलते स्लॉट लगभग ${delayMins || 45} मिनट विलंबित हैं। कृपया अपनी सुविधानुसार समय समायोजित करें। - AgriQueue APMC`
 };
 
 export async function sendSms({ phone, recipientName = 'किसान मित्र', type, data, customText }) {
@@ -31,14 +31,14 @@ export async function sendSms({ phone, recipientName = 'किसान मि�
   if (!messageText && TEMPLATES[type]) {
     messageText = TEMPLATES[type]({ name: recipientName, ...data });
   } else if (!messageText) {
-    messageText = `KrishiSlot Alert: Update for token #${data?.token || ''}`;
+    messageText = `AgriQueue Alert: Update for token #${data?.token || ''}`;
   }
 
   const smsRecord = {
     id: `SMS-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
     phone: cleanPhone,
     recipientName,
-    senderId: 'VK-KRISHI',
+    senderId: 'AQ-MANDI',
     type: type || 'ALERT',
     message: messageText,
     timestamp: new Date().toISOString(),
@@ -109,7 +109,7 @@ export async function sendSms({ phone, recipientName = 'किसान मि�
   // 2. Persist in database
   db.insert('smsLogs', smsRecord);
 
-  // 3. Emit real-time event for SSE and virtual phone drawer
+  // 3. Emit real-time event for SSE
   smsEvents.emit('sms_sent', smsRecord);
 
   console.log(`\n[SMS DISPATCHED] -> To: +91 ${cleanPhone} | Type: ${type}`);

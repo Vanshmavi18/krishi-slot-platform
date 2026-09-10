@@ -175,7 +175,7 @@ export function renderCentreOperations({ stats, tokens, crops, t }) {
           </div>
 
           <div style="background:#fef2f2;border:1px solid #fecaca;padding:12px;border-radius:10px;font-size:12px;color:#991b1b;margin-bottom:20px">
-            ⚠️ <b>Telecom Broadcast Notice:</b> Message will be delivered with sender ID <code>VK-KRISHI</code> to all pending vehicle drivers.
+            ⚠️ <b>Telecom Broadcast Notice:</b> Message will be delivered with sender ID <code>AQ-MANDI</code> to all pending vehicle drivers.
           </div>
 
           <button id="btn-send-broadcast" class="cta" style="width:100%;background:#dc2626">

@@ -46,10 +46,6 @@ export function renderSidebar({ currentView, user, t }) {
               <i>🌾</i>
               <span>${t.nav.procurements}</span>
             </button>
-            <button class="nav-link ${currentView === 'sms' ? 'active' : ''}" data-view="sms">
-              <i>📱</i>
-              <span>${t.nav.smsLogs}</span>
-            </button>
           </nav>
         ` : ''}
 

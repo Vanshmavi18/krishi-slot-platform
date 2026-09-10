@@ -1,7 +1,7 @@
 // src/i18n.js
 export const translations = {
   en: {
-    brandName: 'KrishiSlot',
+    brandName: 'AgriQueue',
     brandTagline: 'Smart Mandi & Procurement Platform',
     govLabel: 'Govt. of India & State APMC Mandi Portal',
     nav: {
@@ -9,7 +9,7 @@ export const translations = {
       booking: 'Book Slot',
       queue: 'Live Queue',
       procurements: 'My Procurements',
-      smsLogs: 'SMS & Alerts',
+      smsLogs: 'Notifications & Alerts',
       profile: 'Farmer Profile',
       centreOps: 'Mandi Counter Operations',
       logout: 'Logout'
@@ -18,8 +18,8 @@ export const translations = {
       eyebrow: 'Smart Agricultural Procurement',
       title: 'Your Crop. Your Time.',
       titleAccent: 'Zero Mandi Waiting.',
-      subtitle: 'Book verified procurement slots, monitor live mandi gate queues, receive real-time SMS alerts at home, and track DBT payment transfers directly to your bank account.',
-      loginFarmer: 'Farmer Login (Mobile OTP) →',
+      subtitle: 'Book verified procurement slots, monitor live mandi gate queues, receive real-time email & SMS alerts at home, and track DBT payment transfers directly to your bank account.',
+      loginFarmer: 'Farmer Login (Email OTP) →',
       loginStaff: 'Mandi Staff Portal',
       demoFarmer: 'Quick Demo: Farmer Ramesh',
       demoOfficer: 'Quick Demo: Mandi Officer Verma',
@@ -54,8 +54,8 @@ export const translations = {
       checkQueueSub: 'Live token board',
       trackPaymentBtn: 'Track Payment',
       trackPaymentSub: 'DBT bank status',
-      smsAlertsBtn: 'SMS Messages',
-      smsAlertsSub: 'View mobile inbox',
+      smsAlertsBtn: 'Notifications',
+      smsAlertsSub: 'View live alerts',
       recentActivity: 'Recent Procurement Activity',
       centreNotice: 'Centre Advisory',
       noticeContent: 'Jaitpur Procurement Centre is operating normally. Please bring Aadhaar, Land Record (Khasra), and arrive 15 minutes before your scheduled slot.'
@@ -76,8 +76,8 @@ export const translations = {
       full: 'Full',
       summaryTitle: 'Booking Estimate & Summary',
       calculatedAmount: 'Estimated MSP Payout',
-      confirmBtn: 'Confirm Slot Booking & Send SMS',
-      note: 'Token number and QR verification slip will be generated instantly and dispatched via SMS to your registered mobile number.'
+      confirmBtn: 'Confirm Slot Booking & Send Alert',
+      note: 'Token number and QR verification slip will be generated instantly and dispatched to your email and phone.'
     },
     queue: {
       title: 'Live Mandi Queue Board',
@@ -88,8 +88,8 @@ export const translations = {
       estWait: 'Estimated Arrival Wait Time',
       countersTitle: 'Active Counter Breakdown',
       planArrival: 'Arrival Advisory',
-      reminderNotice: 'Proximity SMS will automatically trigger to your phone when 5 tokens remain before yours. Arrive only then to eliminate wait times.',
-      setReminderBtn: 'Set SMS Arrival Reminder',
+      reminderNotice: 'Proximity alerts will automatically trigger to your phone and email when 5 tokens remain before yours. Arrive only then to eliminate wait times.',
+      setReminderBtn: 'Set Arrival Reminder',
       simulateBtn: 'Simulate Queue Movement (+1 Token)',
       centreCapacity: 'Today’s Centre Load'
     },
@@ -112,7 +112,7 @@ export const translations = {
       waitingTokens: 'Waiting in Mandi',
       completedCount: 'Weighed & Completed',
       advanceBtn: 'Call Next Token (Counter 2)',
-      delayAlertBtn: 'Broadcast Weather / Congestion Delay SMS',
+      delayAlertBtn: 'Broadcast Weather / Congestion Delay Alert',
       weighmentTitle: 'New Weighment & Assay Entry',
       tokenInput: 'Token Number',
       grossInput: 'Gross Weight (qtl)',
@@ -123,7 +123,7 @@ export const translations = {
   },
 
   hi: {
-    brandName: 'कृषि स्लॉट',
+    brandName: 'एग्रीक्यू',
     brandTagline: 'स्मार्ट मंडी एवं खरीद प्रबंधन प्रणाली',
     govLabel: 'भारत सरकार एवं राज्य कृषि उपज मंडी समिति पोर्टल',
     nav: {
@@ -131,7 +131,7 @@ export const translations = {
       booking: 'स्लॉट बुक करें',
       queue: 'लाइव कतार स्थिति',
       procurements: 'मेरी फसल खरीद',
-      smsLogs: 'एसएमएस एवं अलर्ट',
+      smsLogs: 'अलर्ट एवं सूचनाएं',
       profile: 'किसान प्रोफाइल',
       centreOps: 'मंडी काउंटर नियंत्रण',
       logout: 'लॉगआउट'
@@ -140,8 +140,8 @@ export const translations = {
       eyebrow: 'आधुनिक डिजिटल फसल खरीद',
       title: 'आपकी फसल. आपका समय.',
       titleAccent: 'मंडी में लंबी कतारों से मुक्ति।',
-      subtitle: 'अपनी उपज बेचने के लिए समय स्लॉट बुक करें, घर बैठे लाइव कतार देखें, सीधे मोबाइल पर SMS अलर्ट पाएं, और DBT द्वारा सीधे बैंक खाते में भुगतान प्राप्त करें।',
-      loginFarmer: 'किसान लॉगिन (मोबाइल OTP) →',
+      subtitle: 'अपनी उपज बेचने के लिए समय स्लॉट बुक करें, घर बैठे लाइव कतार देखें, ईमेल और SMS अलर्ट पाएं, और DBT द्वारा सीधे बैंक खाते में भुगतान प्राप्त करें।',
+      loginFarmer: 'किसान लॉगिन (ईमेल OTP) →',
       loginStaff: 'मंडी अधिकारी लॉगिन',
       demoFarmer: 'तुरंत डेमो: किसान रमेश कुमार',
       demoOfficer: 'तुरंत डेमो: मंडी निरीक्षक वर्मा',
@@ -176,8 +176,8 @@ export const translations = {
       checkQueueSub: 'लाइव टोकन बोर्ड',
       trackPaymentBtn: 'भुगतान स्थिति',
       trackPaymentSub: 'DBT बैंक खाता स्थिति',
-      smsAlertsBtn: 'एसएमएस अलर्ट',
-      smsAlertsSub: 'मोबाइल संदेश देखें',
+      smsAlertsBtn: 'अलर्ट एवं सूचनाएं',
+      smsAlertsSub: 'लाइव संदेश देखें',
       recentActivity: 'हाल की खरीद गतिविधियां',
       centreNotice: 'खरीद केंद्र सूचना',
       noticeContent: 'जैतपुर खरीद केंद्र सामान्य रूप से कार्य कर रहा है। कृपया आधार, खसरा-खतौनी और बैंक पासबुक साथ लाएं तथा निर्धारित समय से 15 मिनट पूर्व ही पहुंचें।'
@@ -198,8 +198,8 @@ export const translations = {
       full: 'फुल',
       summaryTitle: 'बुकिंग सारांश एवं अनुमानित आय',
       calculatedAmount: 'अनुमानित समर्थन मूल्य (MSP)',
-      confirmBtn: 'स्लॉट बुकिंग पक्की करें एवं SMS भेजें',
-      note: 'बुकिंग की पुष्टि होते ही आपके मोबाइल नंबर पर टोकन नंबर और QR कोड का एसएमएस तुरंत भेज दिया जाएगा।'
+      confirmBtn: 'स्लॉट बुकिंग पक्की करें एवं अलर्ट भेजें',
+      note: 'बुकिंग की पुष्टि होते ही आपके ईमेल और मोबाइल पर टोकन नंबर और QR कोड का विवरण तुरंत भेज दिया जाएगा।'
     },
     queue: {
       title: 'लाइव मंडी कतार स्थिति',
@@ -210,8 +210,8 @@ export const translations = {
       estWait: 'अनुमानित प्रतीक्षा समय',
       countersTitle: 'काउंटरवार स्थिति',
       planArrival: 'मंडी आगमन परामर्श',
-      reminderNotice: 'जब आपके नंबर से पहले केवल 5 किसान शेष रहेंगे, तब आपके मोबाइल पर तुरंत SMS अलर्ट भेजा जाएगा। तभी मंडी के लिए निकलें।',
-      setReminderBtn: 'SMS अलर्ट सेट करें',
+      reminderNotice: 'जब आपके नंबर से पहले केवल 5 किसान शेष रहेंगे, तब आपके फोन पर तुरंत अलर्ट भेजा जाएगा। तभी मंडी के लिए निकलें।',
+      setReminderBtn: 'अलर्ट सेट करें',
       simulateBtn: 'कतार आगे बढ़ाएं (+1 टोकन)',
       centreCapacity: 'आज का मंडी भार'
     },
@@ -234,7 +234,7 @@ export const translations = {
       waitingTokens: 'प्रतीक्षारत किसान',
       completedCount: 'तुलाई संपन्न',
       advanceBtn: 'अगला टोकन बुलाएं (काउंटर 2)',
-      delayAlertBtn: 'मौसम / जाम का SMS अलर्ट जारी करें',
+      delayAlertBtn: 'मौसम / जाम का अलर्ट जारी करें',
       weighmentTitle: 'नई तुलाई एवं गुणवत्ता प्रविष्टि',
       tokenInput: 'टोकन संख्या',
       grossInput: 'कुल वजन (सकल क्विंटल)',

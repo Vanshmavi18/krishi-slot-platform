@@ -1,13 +1,18 @@
 // test-comprehensive.js
-async function runAll() {
-  console.log('=== KRISHISLOT COMPREHENSIVE SUITE TEST ===\n');
+const BASE = process.env.API_URL || 'http://127.0.0.1:5000';
 
-  // 1. Health
-  const health = await fetch('http://localhost:5000/api/health').then(r => r.json());
-  console.log('✓ API Health Check:', health.status, `(v${health.version})`);
+async function runAll() {
+  console.log('=== AGRIQUEUE COMPREHENSIVE SUITE TEST ===\n');
+
+  // 1. Health & Database Status
+  const health = await fetch(`${BASE}/api/health`).then(r => r.json());
+  console.log('✓ API Health Check:', health.status, `(Service: ${health.service}, DB: ${health.database})`);
+
+  const dbStatus = await fetch(`${BASE}/api/db/status`).then(r => r.json());
+  console.log('✓ Database Connection:', dbStatus.provider, `(Connected: ${dbStatus.connected}, Collections: ${Object.keys(dbStatus.collections).length})`);
 
   // 2. Staff Authentication (Mandi Officer)
-  const staffLogin = await fetch('http://localhost:5000/api/auth/login-staff', {
+  const staffLogin = await fetch(`${BASE}/api/auth/login-staff`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ staffId: 'OFFICER-01', password: 'admin123' })
@@ -15,35 +20,36 @@ async function runAll() {
   console.log('✓ Staff Login:', staffLogin.success, `Role: ${staffLogin.user.role}, Name: ${staffLogin.user.name}`);
 
   // 3. Farmer Email OTP Flow
-  const otpRes = await fetch('http://localhost:5000/api/auth/send-email-otp', {
+  const otpRes = await fetch(`${BASE}/api/auth/send-email-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'ramesh.farmer@krishislot.in' })
+    body: JSON.stringify({ email: 'ramesh.farmer@agriqueue.in' })
   }).then(r => r.json());
   console.log('✓ OTP Dispatched via Email Service:', otpRes.success, 'Code:', otpRes.demoOtp);
 
-  const verifyRes = await fetch('http://localhost:5000/api/auth/verify-email-otp', {
+  const verifyRes = await fetch(`${BASE}/api/auth/verify-email-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'ramesh.farmer@krishislot.in', otp: otpRes.demoOtp || '123456' })
+    body: JSON.stringify({ email: 'ramesh.farmer@agriqueue.in', otp: otpRes.demoOtp || '123456' })
   }).then(r => r.json());
   console.log('✓ Email OTP Verified:', verifyRes.success, 'Farmer:', verifyRes.user.name);
   const farmerToken = verifyRes.token;
 
   // 4. Slots & Booking
-  const centres = await fetch('http://localhost:5000/api/slots/centres').then(r => r.json());
+  const centres = await fetch(`${BASE}/api/slots/centres`).then(r => r.json());
   console.log('✓ APMC Centres loaded:', centres.centres.length);
 
-  const crops = await fetch('http://localhost:5000/api/slots/crops').then(r => r.json());
+  const crops = await fetch(`${BASE}/api/slots/crops`).then(r => r.json());
   console.log('✓ Crops & MSP Rates loaded:', crops.crops.length);
 
-  const booking = await fetch('http://localhost:5000/api/slots/book', {
+  const booking = await fetch(`${BASE}/api/slots/book`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${farmerToken}` },
     body: JSON.stringify({
       farmerId: 'FRM-UP-26032',
       farmerName: 'Ramesh Kumar',
       farmerPhone: '9876543210',
+      farmerEmail: 'ramesh.farmer@agriqueue.in',
       centreId: 'CTR-UP-01',
       cropId: 'paddy_comm',
       quantity: 45,
@@ -55,7 +61,7 @@ async function runAll() {
   console.log('✓ Slot Booking Confirmed:', booking.success, 'Token #:', booking.booking.token);
 
   // 5. Live Queue Advancement
-  const advance = await fetch('http://localhost:5000/api/queue/advance', {
+  const advance = await fetch(`${BASE}/api/queue/advance`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ counterId: 2 })
@@ -63,15 +69,15 @@ async function runAll() {
   console.log('✓ Mandi Queue Advanced:', advance.success, 'Now Serving:', advance.token);
 
   // 6. Emergency Delay Broadcast
-  const broadcast = await fetch('http://localhost:5000/api/queue/broadcast-delay', {
+  const broadcast = await fetch(`${BASE}/api/queue/broadcast-delay`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ centreId: 'CTR-UP-01', reason: 'Unseasonal rain and wet grain assay delay', delayMins: 45 })
   }).then(r => r.json());
-  console.log('✓ Emergency Delay Alert Broadcasted:', broadcast.success, `SMS sent to ${broadcast.dispatchedCount} farmers`);
+  console.log('✓ Emergency Delay Alert Broadcasted:', broadcast.success, `Dispatched to ${broadcast.dispatchedCount} farmers`);
 
   // 7. Digital Weighment & J-Form Issuance
-  const procurement = await fetch('http://localhost:5000/api/procurements/create', {
+  const procurement = await fetch(`${BASE}/api/procurements/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -88,17 +94,17 @@ async function runAll() {
   console.log('✓ Weighment Recorded & J-Form Issued:', procurement.success, 'Receipt #:', procurement.procurement.id, 'Payable: ₹' + procurement.procurement.amount);
 
   // 8. DBT Payment Approval
-  const paid = await fetch(`http://localhost:5000/api/procurements/${procurement.procurement.id}/approve-payment`, {
+  const paid = await fetch(`${BASE}/api/procurements/${procurement.procurement.id}/approve-payment`, {
     method: 'POST'
   }).then(r => r.json());
   console.log('✓ DBT Payment Dispatched:', paid.success, 'Status:', paid.procurement.paymentStatus, 'UTR:', paid.procurement.utr);
 
-  // 9. Check Farmer SMS Inbox
-  const smsList = await fetch('http://localhost:5000/api/sms/logs?phone=9876543210').then(r => r.json());
-  console.log(`✓ Farmer Virtual Phone received ${smsList.logs.length} DLT Compliant SMS alerts`);
+  // 9. Check SMS Dispatch Logs
+  const smsList = await fetch(`${BASE}/api/sms/logs?phone=9876543210`).then(r => r.json());
+  console.log(`✓ Farmer SMS Gateway recorded ${smsList.logs.length} AgriQueue telecom alerts`);
 
   // 10. Buyer Authentication
-  const buyerLogin = await fetch('http://localhost:5000/api/auth/login-buyer', {
+  const buyerLogin = await fetch(`${BASE}/api/auth/login-buyer`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ identifier: 'BUYER-01', password: 'buyer123' })
@@ -106,10 +112,10 @@ async function runAll() {
   console.log(`✓ Buyer Authentication: ${buyerLogin.success} (${buyerLogin.user.name} - ${buyerLogin.user.company})`);
 
   // 11. Buyer Marketplace & Contract Placement
-  const market = await fetch('http://localhost:5000/api/buyer/marketplace').then(r => r.json());
+  const market = await fetch(`${BASE}/api/buyer/marketplace`).then(r => r.json());
   console.log(`✓ Buyer Mandi Marketplace: ${market.lots.length} active lots available`);
 
-  const buyerOrder = await fetch('http://localhost:5000/api/buyer/orders', {
+  const buyerOrder = await fetch(`${BASE}/api/buyer/orders`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -127,12 +133,12 @@ async function runAll() {
   console.log(`✓ Buyer Contract Placed: #${buyerOrder.order.id}, Total Value: ₹${buyerOrder.order.totalValue.toLocaleString('en-IN')}, Gate Pass: #${buyerOrder.order.gatePassId}`);
 
   // 12. Real-Time Notification System Fetch
-  const notifs = await fetch('http://localhost:5000/api/notifications?userId=FRM-UP-26032').then(r => r.json());
+  const notifs = await fetch(`${BASE}/api/notifications?userId=FRM-UP-26032`).then(r => r.json());
   console.log(`✓ Notification System: ${notifs.notifications.length} notifications fetched (${notifs.unreadCount} unread)`);
   console.log(`  Latest Notification: "${notifs.notifications[0].title}"`);
 
   // 13. Mark All Notifications As Read
-  const markRes = await fetch('http://localhost:5000/api/notifications/read-all', {
+  const markRes = await fetch(`${BASE}/api/notifications/read-all`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId: 'FRM-UP-26032' })

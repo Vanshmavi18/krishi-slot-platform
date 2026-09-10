@@ -105,7 +105,7 @@ export class ReceiptModal {
               </div>
               <div style="text-align:right">
                 <span style="display:block;font-size:10px;color:#6b7280">DIGITALLY VERIFIED</span>
-                <span style="color:#15803d;font-weight:800">KrishiSlot APMC ✓</span>
+                <span style="color:#15803d;font-weight:800">AgriQueue APMC ✓</span>
               </div>
             </div>
 

@@ -1,19 +1,19 @@
 // server/services/authService.js
 import jwt from 'jsonwebtoken';
-import { db } from '../data/db.js';
+import { db, Otp } from '../data/db.js';
 import { sendEmail, getEmailGatewayStatus } from './emailService.js';
 import { sendSms } from './smsService.js';
 
 export { getEmailGatewayStatus };
 
-const JWT_SECRET = process.env.JWT_SECRET || 'krishi_slot_secret_key_2026_sih';
+const JWT_SECRET = process.env.JWT_SECRET || 'agriqueue_secret_key_2026_sih';
 const emailOtpStore = new Map(); // email -> { otp, expiresAt, userId }
 
 // Helper to normalize and validate email
 export function normalizeEmail(email) {
   const clean = String(email || '').trim().toLowerCase();
   if (!clean || !clean.includes('@') || clean.length < 5) {
-    throw new Error('Please enter a valid email address (e.g. farmer@krishislot.in)');
+    throw new Error('Please enter a valid email address (e.g. farmer@agriqueue.in)');
   }
   return clean;
 }
@@ -64,7 +64,7 @@ export async function requestEmailOtp(emailOrPhone) {
   }
 
   // Generate 6-digit OTP
-  const otp = (cleanEmail === 'ramesh.farmer@krishislot.in' || cleanEmail === 'farmer@krishi.gov.in') 
+  const otp = (cleanEmail === 'ramesh.farmer@agriqueue.in' || cleanEmail === 'ramesh.farmer@krishislot.in' || cleanEmail === 'farmer@krishi.gov.in') 
     ? '123456' 
     : String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
@@ -74,7 +74,16 @@ export async function requestEmailOtp(emailOrPhone) {
     emailOtpStore.set(user.phone, { otp, expiresAt, userId: user.id });
   }
 
-  // Dispatch Email Notification (Real Gmail)
+  // Persist to MongoDB Otp collection if connected
+  if (db.isMongoConnected) {
+    Otp.findOneAndUpdate(
+      { emailOrPhone: cleanEmail },
+      { emailOrPhone: cleanEmail, otp, userId: user.id, expiresAt: new Date(expiresAt) },
+      { upsert: true }
+    ).catch(() => {});
+  }
+
+  // Dispatch Email Notification (Real Gmail or Resend)
   const emailResult = await sendEmail({
     to: cleanEmail,
     recipientName: user.name,
@@ -89,9 +98,9 @@ export async function requestEmailOtp(emailOrPhone) {
 
   let responseMessage = '';
   if (emailSent && isReal) {
-    responseMessage = `Verification code sent to your Gmail inbox (${cleanEmail}). Please check your inbox.`;
+    responseMessage = `Verification code sent to your email inbox (${cleanEmail}). Please check your inbox.`;
   } else if (emailResult?.providerError) {
-    responseMessage = `Email dispatch error: ${emailResult.providerError}. Please try again.`;
+    responseMessage = `Email dispatch notice: ${emailResult.providerError}. Please check your connection.`;
   } else {
     responseMessage = `Verification code dispatched for ${cleanEmail}.`;
   }
@@ -106,7 +115,8 @@ export async function requestEmailOtp(emailOrPhone) {
     isRealEmail: isReal && emailSent,
     gatewayProvider: emailResult?.provider || 'SIMULATOR',
     providerError: emailResult?.providerError || null,
-    hasPassword: Boolean(user.passwordHash)
+    hasPassword: Boolean(user.passwordHash),
+    demoOtp: (cleanEmail === 'ramesh.farmer@agriqueue.in' || cleanEmail === 'ramesh.farmer@krishislot.in') ? otp : undefined
   };
 }
 
@@ -126,11 +136,21 @@ export async function verifyEmailOtp(emailOrPhone, otp, savePassword = null) {
     if (u?.phone) stored = emailOtpStore.get(u.phone);
   }
 
+  // Check MongoDB if not in memory
+  if (!stored && db.isMongoConnected) {
+    try {
+      const doc = await Otp.findOne({ emailOrPhone: key });
+      if (doc) {
+        stored = { otp: doc.otp, expiresAt: doc.expiresAt.getTime(), userId: doc.userId };
+      }
+    } catch (e) {}
+  }
+
   let user = null;
 
   if (!stored) {
     // Known demo account quick testing fallback
-    if ((key === 'ramesh.farmer@krishislot.in' || key === '9876543210' || key === 'farmer@krishi.gov.in') && cleanOtp === '123456') {
+    if ((key === 'ramesh.farmer@agriqueue.in' || key === 'ramesh.farmer@krishislot.in' || key === '9876543210' || key === 'farmer@krishi.gov.in') && cleanOtp === '123456') {
       user = db.find('users', u => (u.email && u.email.toLowerCase() === key) || u.phone === '9876543210');
     } else {
       throw new Error('No active verification code found. Please request a new code.');
@@ -150,7 +170,7 @@ export async function verifyEmailOtp(emailOrPhone, otp, savePassword = null) {
   }
 
   if (!user) {
-    user = db.find('users', u => u.email && u.email.toLowerCase() === cleanEmail);
+    user = db.find('users', u => (u.email && u.email.toLowerCase() === key) || (u.phone && u.phone === key));
   }
 
   if (!user) {
@@ -158,42 +178,46 @@ export async function verifyEmailOtp(emailOrPhone, otp, savePassword = null) {
   }
 
   // Persist password if requested
-  if (savePassword && String(savePassword).trim().length >= 4) {
-    const cleanPwd = String(savePassword).trim();
+  if (savePassword && typeof savePassword === 'string' && savePassword.length >= 4) {
     db.update('users', u => u.id === user.id, u => ({
       ...u,
-      passwordHash: cleanPwd
+      passwordHash: `plain_${savePassword}`,
+      updatedAt: new Date().toISOString()
     }));
-    user.passwordHash = cleanPwd;
+    user.passwordHash = `plain_${savePassword}`;
   }
 
+  // Generate Session JWT
   const token = jwt.sign(
-    { id: user.id, role: user.role, email: user.email, phone: user.phone },
+    {
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      staffId: user.staffId,
+      buyerId: user.buyerId
+    },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
 
   const { passwordHash, ...safeUser } = user;
-  safeUser.hasPassword = Boolean(user.passwordHash);
 
   return {
     success: true,
     token,
     user: safeUser,
-    passwordSaved: Boolean(savePassword && String(savePassword).trim().length >= 4)
+    message: `Welcome back, ${user.name}!`
   };
 }
 
-// 3. Login with Email and Password
-export async function loginWithEmailPassword(email, password) {
+// 3. Login with Email + Password
+export function loginWithEmailPassword(email, password) {
   const cleanEmail = normalizeEmail(email);
-  const cleanPwd = String(password || '').trim();
+  const cleanPass = String(password || '').trim();
 
-  if (!cleanPwd) {
-    throw new Error('Please enter your password.');
-  }
-
-  let user = db.find('users', u => 
+  const user = db.find('users', u => 
     (u.email && u.email.toLowerCase() === cleanEmail) ||
     (cleanEmail.startsWith('ramesh') && u.phone === '9876543210') ||
     (cleanEmail.startsWith('admin') && (u.role === 'admin' || u.staffId === 'APMC-ADMIN')) ||
@@ -201,104 +225,118 @@ export async function loginWithEmailPassword(email, password) {
   );
 
   if (!user) {
-    throw new Error('No account found for this email address. Please login with Email OTP first.');
+    throw new Error('No account found with this email. Please log in with OTP to create your account.');
   }
 
-  const matches = (user.passwordHash && user.passwordHash === cleanPwd) ||
-                  (user.role === 'farmer' && (cleanPwd === 'farmer123' || cleanPwd === 'farmerPass2026' || cleanPwd === user.passwordHash)) ||
-                  ((user.role === 'admin' || user.role === 'officer') && (cleanPwd === 'admin123' || cleanPwd === user.passwordHash)) ||
-                  (user.role === 'buyer' && (cleanPwd === 'buyer123' || cleanPwd === user.passwordHash));
+  const matches = (cleanPass === 'admin123' && (user.role === 'admin' || user.role === 'officer')) ||
+                  (cleanPass === 'buyer123' && user.role === 'buyer') ||
+                  (cleanPass === 'farmer123' && user.role === 'farmer') ||
+                  (user.passwordHash && (user.passwordHash === `plain_${cleanPass}` || user.passwordHash === cleanPass));
 
   if (!matches) {
-    throw new Error('Incorrect password. You can login with Email OTP instead or reset your password.');
+    throw new Error('Incorrect password. Please try again or log in with Email OTP.');
   }
 
   const token = jwt.sign(
-    { id: user.id, role: user.role, email: user.email || cleanEmail, phone: user.phone },
+    {
+      id: user.id,
+      role: user.role,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      staffId: user.staffId,
+      buyerId: user.buyerId
+    },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
 
   const { passwordHash, ...safeUser } = user;
-  safeUser.hasPassword = true;
-
   return {
     success: true,
     token,
-    user: safeUser
+    user: safeUser,
+    message: `Welcome back, ${user.name}!`
   };
 }
 
-// 4. Check Email Auth status
+// 4. Check Email Registration Status
 export function checkEmailAuth(email) {
   try {
     const cleanEmail = normalizeEmail(email);
-    const user = db.find('users', u => u.email && u.email.toLowerCase() === cleanEmail);
-    if (!user) {
-      return { valid: true, exists: false, hasPassword: false };
-    }
+    const user = db.find('users', u => 
+      (u.email && u.email.toLowerCase() === cleanEmail) ||
+      (cleanEmail.startsWith('ramesh') && u.phone === '9876543210') ||
+      (cleanEmail.startsWith('admin') && (u.role === 'admin' || u.staffId === 'APMC-ADMIN')) ||
+      (cleanEmail.startsWith('buyer') && (u.role === 'buyer' || u.buyerId === 'BUYER-01'))
+    );
+
     return {
       valid: true,
-      exists: true,
-      role: user.role,
-      name: user.name,
-      hasPassword: Boolean(user.passwordHash || user.role === 'farmer')
+      exists: Boolean(user),
+      role: user?.role || 'farmer',
+      name: user?.name,
+      hasPassword: Boolean(user?.passwordHash)
     };
   } catch {
-    return { valid: false };
+    return { valid: false, exists: false };
   }
 }
 
-// 5. Save or update user password by email
+// 5. Save or Reset Password
 export function saveEmailPassword(email, newPassword) {
   const cleanEmail = normalizeEmail(email);
-  if (!newPassword || String(newPassword).trim().length < 4) {
+  const cleanPass = String(newPassword || '').trim();
+
+  if (!cleanPass || cleanPass.length < 4) {
     throw new Error('Password must be at least 4 characters long.');
   }
 
   const user = db.find('users', u => u.email && u.email.toLowerCase() === cleanEmail);
   if (!user) {
-    throw new Error('No user account found for this email address.');
+    throw new Error('No user found with this email.');
   }
 
-  const cleanPwd = String(newPassword).trim();
   db.update('users', u => u.id === user.id, u => ({
     ...u,
-    passwordHash: cleanPwd
+    passwordHash: `plain_${cleanPass}`,
+    updatedAt: new Date().toISOString()
   }));
 
-  return {
-    success: true,
-    message: 'Password saved successfully.'
-  };
+  return { success: true, message: 'Password saved successfully.' };
 }
 
-// 6. Staff Login (Admin / Officer)
+// 6. Login Mandi Staff
 export async function loginStaff(identifier, password) {
-  const clean = String(identifier || '').trim();
-  const cleanId = clean.toUpperCase();
-  const cleanEmail = clean.toLowerCase();
+  const cleanId = String(identifier || '').trim();
+  const cleanPass = String(password || '').trim();
 
   const user = db.find('users', u => 
-    (u.role === 'officer' || u.role === 'admin') && 
-    (u.staffId === cleanId || (u.email && u.email.toLowerCase() === cleanEmail))
+    (u.role === 'admin' || u.role === 'officer') &&
+    (u.staffId === cleanId || 
+     (u.email && u.email.toLowerCase() === cleanId.toLowerCase()) || 
+     cleanId === 'OFFICER-01' || 
+     cleanId === 'APMC-ADMIN' ||
+     cleanId.toLowerCase() === 'admin@agriqueue.in' ||
+     cleanId.toLowerCase() === 'admin@krishislot.in' ||
+     cleanId.toLowerCase() === 'officer@agriqueue.in')
   );
 
   if (!user) {
-    throw new Error('Admin/Staff ID or Email not found.');
+    throw new Error('Staff ID / Email not recognized.');
   }
 
-  if (user.passwordHash !== password && password !== 'admin123') {
-    throw new Error('Invalid password for Staff ID.');
+  if (cleanPass !== 'admin123' && user.passwordHash !== `plain_${cleanPass}`) {
+    throw new Error('Invalid staff password.');
   }
 
   const token = jwt.sign(
-    { id: user.id, role: user.role, staffId: user.staffId, email: user.email },
+    { id: user.id, role: user.role, staffId: user.staffId, name: user.name },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
-  const { passwordHash, ...safeUser } = user;
 
+  const { passwordHash, ...safeUser } = user;
   return {
     success: true,
     token,
@@ -306,57 +344,31 @@ export async function loginStaff(identifier, password) {
   };
 }
 
-// 7. Buyer Login (Trader / Miller)
+// 7. Login Buyer
 export async function loginBuyer(identifier, password) {
-  const clean = String(identifier || '').trim();
-  const cleanUpper = clean.toUpperCase();
-  const cleanLower = clean.toLowerCase();
-  const cleanPhone = clean.replace(/\D/g, '').slice(-10);
+  const cleanId = String(identifier || '').trim();
+  const cleanPass = String(password || '').trim();
 
-  // Search by buyerId, email, or phone
-  let user = db.find('users', u => 
-    u.role === 'buyer' && (
-      (u.buyerId && u.buyerId.toUpperCase() === cleanUpper) ||
-      (u.email && u.email.toLowerCase() === cleanLower) ||
-      (u.phone && u.phone === cleanPhone) ||
-      (u.id && u.id.toUpperCase() === cleanUpper)
-    )
+  const user = db.find('users', u => 
+    u.role === 'buyer' &&
+    (u.buyerId === cleanId || (u.email && u.email.toLowerCase() === cleanId.toLowerCase()) || cleanId === 'BUYER-01')
   );
 
-  // Auto-register buyer if demo identifier
-  if (!user && (cleanUpper.startsWith('BUYER') || cleanLower.includes('@') || cleanPhone.length === 10)) {
-    user = {
-      id: cleanUpper.startsWith('BUYER') ? cleanUpper : `BUYER-${Math.floor(1000 + Math.random() * 9000)}`,
-      role: 'buyer',
-      buyerId: cleanUpper.startsWith('BUYER') ? cleanUpper : `BUYER-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: `Commercial Buyer (${clean.slice(-4)})`,
-      email: cleanLower.includes('@') ? cleanLower : 'buyer@agrocorp.in',
-      company: 'AgriTrade Commercials Ltd',
-      phone: cleanPhone || '9822334455',
-      passwordHash: password || 'buyer123',
-      licenseNo: `APMC-DL-${Math.floor(1000 + Math.random() * 9000)}`,
-      gstin: '09AAACA' + Math.floor(1000 + Math.random() * 9000) + 'Q1Z5',
-      businessType: 'Grain Procurement & Processing',
-      location: 'Gorakhpur APMC Trade Hub'
-    };
-    db.insert('users', user);
-  }
-
   if (!user) {
-    throw new Error('Buyer account not found. Please check your Buyer ID or Email.');
+    throw new Error('Buyer ID / Email not recognized.');
   }
 
-  if (password && user.passwordHash && user.passwordHash !== password && password !== 'buyer123') {
-    throw new Error('Invalid password for Buyer account.');
+  if (cleanPass !== 'buyer123' && user.passwordHash !== `plain_${cleanPass}`) {
+    throw new Error('Invalid buyer password.');
   }
 
   const token = jwt.sign(
-    { id: user.id, role: user.role, buyerId: user.buyerId, email: user.email, phone: user.phone },
+    { id: user.id, role: user.role, buyerId: user.buyerId, name: user.name, company: user.company },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
-  const { passwordHash, ...safeUser } = user;
 
+  const { passwordHash, ...safeUser } = user;
   return {
     success: true,
     token,
@@ -370,7 +382,7 @@ export function quickSwitch(role, id = null) {
   const lowerRole = String(role).toLowerCase();
 
   if (lowerRole === 'farmer') {
-    user = db.find('users', u => u.role === 'farmer' && (id ? u.id === id : (u.phone === '9876543210' || u.email === 'ramesh.farmer@krishislot.in')));
+    user = db.find('users', u => u.role === 'farmer' && (id ? u.id === id : (u.phone === '9876543210' || u.email === 'ramesh.farmer@agriqueue.in' || u.email === 'ramesh.farmer@krishislot.in')));
     if (!user) user = db.find('users', u => u.role === 'farmer');
   } else if (lowerRole === 'officer' || lowerRole === 'admin') {
     if (lowerRole === 'admin') {
@@ -396,6 +408,22 @@ export function quickSwitch(role, id = null) {
   return { success: true, token, user: safeUser };
 }
 
+// Update User Profile
+export function updateUserProfile(userId, updates = {}) {
+  const user = db.find('users', u => u.id === userId);
+  if (!user) throw new Error('User not found');
+
+  const allowed = ['name', 'phone', 'village', 'bankName', 'bankAccMasked', 'ifsc', 'landAcres', 'khasraNumber', 'company', 'gstNumber', 'mandiLicense'];
+  const sanitized = {};
+  for (const k of allowed) {
+    if (updates[k] !== undefined) sanitized[k] = updates[k];
+  }
+
+  const updated = db.update('users', u => u.id === userId, u => ({ ...u, ...sanitized, updatedAt: new Date().toISOString() }));
+  const { passwordHash, ...safeUser } = updated;
+  return safeUser;
+}
+
 // --- PHONE & MULTI-CHANNEL ADAPTERS ---
 export async function requestOtp(phoneOrEmail) {
   const raw = String(phoneOrEmail || '').trim();
@@ -415,7 +443,7 @@ export async function requestOtp(phoneOrEmail) {
       role: 'farmer',
       name: `Farmer (+91 ${cleanPhone})`,
       phone: cleanPhone,
-      email: `farmer.${cleanPhone}@krishislot.in`,
+      email: `farmer.${cleanPhone}@agriqueue.in`,
       village: 'Gorakhpur, Uttar Pradesh',
       aadhaarMasked: '•••• •••• ' + Math.floor(1000 + Math.random() * 9000),
       bankName: 'State Bank of India',
@@ -437,7 +465,6 @@ export async function requestOtp(phoneOrEmail) {
     emailOtpStore.set(user.email.toLowerCase(), { otp, expiresAt, userId: user.id });
   }
 
-  // Dispatch real Fast2SMS + SSE Virtual Phone Event
   const smsResult = await sendSms({
     phone: cleanPhone,
     recipientName: user.name,
@@ -455,7 +482,8 @@ export async function requestOtp(phoneOrEmail) {
     expiresInSec: 600,
     smsSent: true,
     isRealSms: Boolean(smsResult?.gateway === 'FAST2SMS_REAL'),
-    hasPassword: Boolean(user.passwordHash)
+    hasPassword: Boolean(user.passwordHash),
+    demoOtp: (cleanPhone === '9876543210') ? otp : undefined
   };
 }
 

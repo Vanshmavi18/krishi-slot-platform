@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import dns from 'dns';
+import { db } from './data/db.js';
 
 // Force IPv4 resolution for cloud platforms (Render/AWS/Heroku) where IPv6 routes are unreachable
 try {
@@ -47,10 +48,16 @@ app.use('/api/buyer', buyerRoutes);
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    service: 'KrishiSlot Backend API',
+    service: 'AgriQueue Backend API',
     version: '2.0.0',
-    time: new Date().toISOString()
+    time: new Date().toISOString(),
+    database: db.isMongoConnected ? 'MongoDB (Active)' : 'Persistent Storage (Active)'
   });
+});
+
+// Database status endpoint
+app.get('/api/db/status', (req, res) => {
+  res.json(db.getDbStatus());
 });
 
 // Serve frontend static build in production
@@ -65,17 +72,22 @@ app.use((req, res) => {
   const indexHtml = path.join(distPath, 'index.html');
   res.sendFile(indexHtml, (err) => {
     if (err) {
-      res.status(200).send('KrishiSlot Backend Running. Start Vite dev server for frontend.');
+      res.status(200).send('AgriQueue Backend Running. Start Vite dev server for frontend.');
     }
   });
 });
 
-const server = app.listen(PORT, () => {
+// Start server and initialize database
+const server = app.listen(PORT, async () => {
   console.log(`\n======================================================`);
-  console.log(`🌾 KrishiSlot API Server running on port ${PORT}`);
+  console.log(`🌱 AgriQueue API Server running on port ${PORT}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
   console.log(`📡 SSE Queue Stream: http://localhost:${PORT}/api/queue/stream`);
+  console.log(`📊 DB Health Check: http://localhost:${PORT}/api/db/status`);
   console.log(`======================================================\n`);
+
+  // Connect to MongoDB if configured
+  await db.connectMongo();
 });
 
 export { app, server };

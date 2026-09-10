@@ -4,6 +4,7 @@ import { Resend } from 'resend';
 import dotenv from 'dotenv';
 import { EventEmitter } from 'events';
 import dns from 'dns';
+import dnsPromises from 'dns/promises';
 
 // Force IPv4 resolution first across all Node sockets (crucial for Render/cloud deployment to prevent ENETUNREACH on IPv6)
 try {
@@ -68,7 +69,7 @@ export function getEmailGatewayStatus() {
     return {
       configured: true,
       gatewayType: 'RESEND_HTTPS',
-      senderEmail: process.env.RESEND_FROM || 'KrishiSlot <onboarding@resend.dev>'
+      senderEmail: process.env.RESEND_FROM || 'AgriQueue <onboarding@resend.dev>'
     };
   }
 
@@ -78,8 +79,6 @@ export function getEmailGatewayStatus() {
     senderEmail: config ? config.user : null
   };
 }
-
-import dnsPromises from 'dns/promises';
 
 // Resolve an explicit IPv4 address for smtp.gmail.com to guarantee zero IPv6 attempts on Render/Docker
 async function resolveGmailIpv4() {
@@ -111,7 +110,6 @@ export async function getTransporters() {
   try {
     if (config.type === 'GMAIL') {
       const ipv4Host = await resolveGmailIpv4();
-      console.log(`[EMAIL GATEWAY] Using resolved IPv4 host for Gmail: ${ipv4Host}`);
 
       const baseOptions = {
         auth: {
@@ -125,9 +123,9 @@ export async function getTransporters() {
         pool: true,
         maxConnections: 5,
         maxMessages: 100,
-        connectionTimeout: 10000,
-        greetingTimeout: 8000,
-        socketTimeout: 15000
+        connectionTimeout: 8000,
+        greetingTimeout: 6000,
+        socketTimeout: 12000
       };
 
       // Primary: SSL port 465 with forced IPv4 literal
@@ -157,9 +155,9 @@ export async function getTransporters() {
           user: config.user,
           pass: config.pass
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 8000,
-        socketTimeout: 15000,
+        connectionTimeout: 8000,
+        greetingTimeout: 6000,
+        socketTimeout: 12000,
         tls: {
           rejectUnauthorized: false
         }
@@ -168,7 +166,6 @@ export async function getTransporters() {
     }
 
     lastConfigHash = configHash;
-    console.log(`[EMAIL GATEWAY] Connected to IPv4 SMTP transports (Port 465 + Port 587 fallback) for ${config.user}`);
     return { primary: primaryTransporter, fallback: fallbackTransporter };
   } catch (err) {
     console.error('[EMAIL GATEWAY ERROR] Failed to initialize transporters:', err.message);
@@ -185,8 +182,8 @@ export const EMAIL_TEMPLATES = {
   OTP: ({ name, otp, expiresInMins = 10 }) => {
     const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
     return {
-      subject: `${otp} is your KrishiSlot verification code [${timeStr}]`,
-      text: `Namaste ${name || 'Farmer Friend'},\n\nYour KrishiSlot login verification code is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nKrishiSlot Smart APMC Portal`,
+      subject: `${otp} is your AgriQueue verification code [${timeStr}]`,
+      text: `Namaste ${name || 'Farmer Friend'},\n\nYour AgriQueue login verification code is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nAgriQueue Smart APMC Portal`,
       html: `
       <!DOCTYPE html>
       <html>
@@ -198,15 +195,15 @@ export const EMAIL_TEMPLATES = {
         <div style="max-width:540px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.06)">
           <!-- Header Banner -->
           <div style="background:linear-gradient(135deg, #15803d 0%, #0f4324 100%);padding:28px 24px;text-align:center;color:#ffffff">
-            <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em">KrishiSlot Platform</h1>
-            <p style="margin:6px 0 0;font-size:13px;opacity:0.9;font-weight:500">Smart APMC Mandi Procurement Portal</p>
+            <h1 style="margin:0;font-size:24px;font-weight:800;letter-spacing:-0.02em">🌱 AgriQueue Platform</h1>
+            <p style="margin:6px 0 0;font-size:13px;opacity:0.9;font-weight:500">Smart Mandi & Procurement Platform</p>
           </div>
 
           <!-- Body -->
           <div style="padding:28px 24px">
             <p style="font-size:16px;margin:0 0 14px;color:#0f2e1b">Namaste <b>${name || 'Farmer Friend'}</b>,</p>
             <p style="font-size:14px;color:#475563;margin:0 0 22px;line-height:1.6">
-              You requested a login verification code for the KrishiSlot portal. Use the official 6-digit OTP below to proceed:
+              You requested a login verification code for the AgriQueue portal. Use the official 6-digit OTP below to proceed:
             </p>
 
             <!-- OTP Card -->
@@ -217,7 +214,7 @@ export const EMAIL_TEMPLATES = {
             </div>
 
             <div style="background:#f8fafc;border-left:4px solid #15803d;padding:12px 14px;border-radius:6px;margin-bottom:20px;font-size:12.5px;color:#334155;line-height:1.5">
-              🔒 <b>Security Note:</b> Never share this code with anyone. KrishiSlot support will never ask for your OTP.
+              🔒 <b>Security Note:</b> Never share this code with anyone. AgriQueue support will never ask for your OTP.
             </div>
 
             <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.5">
@@ -226,7 +223,7 @@ export const EMAIL_TEMPLATES = {
 
             <!-- Footer -->
             <div style="border-top:1px solid #f1f5f9;margin-top:24px;padding-top:18px;font-size:11px;color:#94a3b8;text-align:center;line-height:1.6">
-              Agricultural Produce Market Committee (APMC) • KrishiSlot Portal<br>
+              Agricultural Produce Market Committee (APMC) • AgriQueue Portal<br>
               Smart Mandi & Direct Benefit Transfer
             </div>
           </div>
@@ -234,12 +231,12 @@ export const EMAIL_TEMPLATES = {
       </body>
       </html>
     `
-  };
-},
+    };
+  },
 
   SLOT_CONFIRMED: ({ name, token, crop, centre, date, time, vehicle, quantity, bookingId }) => ({
-    subject: `🌾 Slot Confirmed: Gate Token #${token} — KrishiSlot APMC`,
-    text: `Namaste ${name || 'Farmer Friend'},\n\nYour APMC procurement slot is confirmed!\n\nGate Token: #${token}\nDate: ${date}\nTime Slot: ${time}\nProcurement Mandi: ${centre}\nCrop Harvest: ${crop}\nQuantity: ${quantity} quintals\nVehicle: ${vehicle || 'Tractor Trolley'}\n\nPlease arrive 15 minutes prior to your time window. Keep your Aadhaar and Bank Passbook ready.\n\nKrishiSlot APMC Portal`,
+    subject: `🌾 Slot Confirmed: Gate Token #${token} — AgriQueue APMC`,
+    text: `Namaste ${name || 'Farmer Friend'},\n\nYour APMC procurement slot is confirmed!\n\nGate Token: #${token}\nDate: ${date}\nTime Slot: ${time}\nProcurement Mandi: ${centre}\nCrop Harvest: ${crop}\nQuantity: ${quantity} quintals\nVehicle: ${vehicle || 'Tractor Trolley'}\n\nPlease arrive 15 minutes prior to your time window. Keep your Aadhaar and Bank Passbook ready.\n\nAgriQueue APMC Portal`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -249,7 +246,7 @@ export const EMAIL_TEMPLATES = {
           <div style="background:linear-gradient(135deg, #15803d 0%, #0f4324 100%);padding:28px 24px;text-align:center;color:#ffffff">
             <div style="font-size:38px;margin-bottom:6px">🌾</div>
             <h1 style="margin:0;font-size:22px;font-weight:800">Procurement Slot Confirmed!</h1>
-            <p style="margin:6px 0 0;font-size:13px;opacity:0.9">Official Gate Entry Pass • Agricultural Produce Market Committee</p>
+            <p style="margin:6px 0 0;font-size:13px;opacity:0.9">Official Gate Entry Pass • AgriQueue APMC Network</p>
           </div>
 
           <div style="padding:26px 24px">
@@ -281,7 +278,7 @@ export const EMAIL_TEMPLATES = {
 
             <div style="border-top:1px solid #f1f5f9;padding-top:16px;font-size:11px;color:#94a3b8;text-align:center;line-height:1.5">
               Agricultural Produce Market Committee (APMC) • Government of India<br>
-              KrishiSlot Smart Mandi & DBT Clearing System
+              AgriQueue Smart Mandi & DBT Clearing System
             </div>
           </div>
         </div>
@@ -291,62 +288,43 @@ export const EMAIL_TEMPLATES = {
   }),
 
   JFORM_ISSUED: ({ name, receiptId, crop, grossWeight, tareWeight, netWeight, mspRate, amount, centre, date, bankName, bankAccMasked }) => ({
-    subject: `🏛️ J-Form Issued: #${receiptId} (₹${Number(amount).toLocaleString('en-IN')}) — KrishiSlot APMC`,
-    text: `Namaste ${name || 'Farmer Friend'},\n\nYour official APMC Procurement J-Form #${receiptId} has been generated.\n\nCrop: ${crop}\nNet Weight: ${netWeight} quintals\nMSP Rate: ₹${mspRate}/qtl\nTotal Payable: ₹${Number(amount).toLocaleString('en-IN')}\nMandi Centre: ${centre}\nDate: ${date}\n\nDBT payment has been dispatched via PFMS to ${bankName} (${bankAccMasked}).\n\nKrishiSlot APMC Portal`,
+    subject: `🏛️ J-Form Issued: #${receiptId} (₹${Number(amount).toLocaleString('en-IN')}) — AgriQueue APMC`,
+    text: `Namaste ${name || 'Farmer Friend'},\n\nYour official APMC Procurement J-Form #${receiptId} has been generated.\n\nCrop: ${crop}\nNet Weight: ${netWeight} quintals\nMSP Rate: ₹${mspRate}/qtl\nTotal Payable: ₹${Number(amount).toLocaleString('en-IN')}\nMandi Centre: ${centre}\nDate: ${date}\n\nDBT payment has been dispatched via PFMS to ${bankName} (${bankAccMasked}).\n\nAgriQueue APMC Portal`,
     html: `
       <!DOCTYPE html>
       <html>
       <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
       <body style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:24px 10px;background:#f8fafc;color:#1e293b">
         <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.06)">
-          <div style="background:linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);padding:28px 24px;text-align:center;color:#ffffff">
-            <div style="font-size:38px;margin-bottom:6px">🏛️</div>
-            <h1 style="margin:0;font-size:22px;font-weight:800">Official APMC J-Form Issued</h1>
-            <p style="margin:6px 0 0;font-size:13px;opacity:0.9">Government Procurement Receipt & DBT Claim</p>
+          <div style="background:linear-gradient(135deg, #15803d 0%, #064e3b 100%);padding:28px 24px;text-align:center;color:#ffffff">
+            <h1 style="margin:0;font-size:22px;font-weight:800">Official J-Form Receipt</h1>
+            <p style="margin:6px 0 0;font-size:13px;opacity:0.9">Govt. Procurement Certificate • #${receiptId}</p>
           </div>
 
           <div style="padding:26px 24px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:16px;background:#f1f5f9;padding:10px 14px;border-radius:10px;font-size:12.5px">
-              <span>Receipt No: <b style="color:#0f172a">#${receiptId}</b></span>
-              <span>Date: <b>${date}</b></span>
+            <p style="font-size:15px;margin:0 0 14px;color:#0f2e1b">Namaste <b>${name || 'Farmer Friend'}</b>,</p>
+            <p style="font-size:13.5px;color:#475563;margin:0 0 20px;line-height:1.5">
+              Digital weighment for your harvest at <b>${centre}</b> has concluded. Your J-Form has been submitted to the Treasury for DBT settlement.
+            </p>
+
+            <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:20px;text-align:center;margin-bottom:20px">
+              <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;color:#166534;text-transform:uppercase;display:block">Net Payable MSP Amount</span>
+              <div style="font-size:36px;color:#15803d;font-weight:900;margin:4px 0">₹${Number(amount).toLocaleString('en-IN')}</div>
+              <span style="font-size:12.5px;color:#16a34a;font-weight:600">Net Weight: ${netWeight} qtl • MSP: ₹${mspRate}/qtl</span>
             </div>
 
-            <p style="font-size:14px;margin:0 0 16px;color:#0f2e1b">Seller: <b>${name || 'Farmer Friend'}</b> • Mandi: <b>${centre}</b></p>
-
-            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px;border:1px solid #e2e8f0;border-radius:8px">
-              <tr style="background:#f8fafc;font-weight:700;border-bottom:1px solid #e2e8f0">
-                <th style="padding:8px 10px;text-align:left">Commodity</th>
-                <th style="padding:8px 10px;text-align:right">Gross</th>
-                <th style="padding:8px 10px;text-align:right">Tare</th>
-                <th style="padding:8px 10px;text-align:right">Net Wt</th>
-              </tr>
-              <tr>
-                <td style="padding:8px 10px;font-weight:700">${crop}</td>
-                <td style="padding:8px 10px;text-align:right">${grossWeight} qtl</td>
-                <td style="padding:8px 10px;text-align:right">${tareWeight} qtl</td>
-                <td style="padding:8px 10px;text-align:right;color:#15803d;font-weight:800">${netWeight} qtl</td>
-              </tr>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px">
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:7px 0;color:#64748b">Crop Commodity:</td><td style="padding:7px 0;text-align:right;font-weight:700">${crop}</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:7px 0;color:#64748b">Gross Weight:</td><td style="padding:7px 0;text-align:right;font-weight:600">${grossWeight} qtl</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:7px 0;color:#64748b">Tare (Vehicle):</td><td style="padding:7px 0;text-align:right;font-weight:600">${tareWeight} qtl</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:7px 0;color:#64748b">Net Assayed:</td><td style="padding:7px 0;text-align:right;font-weight:800;color:#15803d">${netWeight} quintals</td></tr>
+              <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:7px 0;color:#64748b">Target Bank Account:</td><td style="padding:7px 0;text-align:right;font-weight:700">${bankName} (${bankAccMasked})</td></tr>
+              <tr><td style="padding:7px 0;color:#64748b">Procurement Date:</td><td style="padding:7px 0;text-align:right;font-weight:700">${date}</td></tr>
             </table>
-
-            <div style="background:#f0fdf4;border:2px dashed #86efac;border-radius:12px;padding:16px;margin-bottom:20px">
-              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
-                <span style="color:#475563">Government MSP Rate:</span>
-                <b>₹${Number(mspRate).toLocaleString('en-IN')} / quintal</b>
-              </div>
-              <div style="display:flex;justify-content:space-between;border-top:1px solid #bbf7d0;padding-top:8px;font-size:16px">
-                <span style="font-weight:800;color:#166534">Total DBT Amount Payable:</span>
-                <b style="font-size:22px;color:#15803d;font-weight:900">₹${Number(amount).toLocaleString('en-IN')}</b>
-              </div>
-            </div>
-
-            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;font-size:12px;color:#334155;margin-bottom:18px">
-              💳 <b>Direct Benefit Transfer (DBT) Status:</b><br>
-              Payment initiated to <b>${bankName}</b> (${bankAccMasked}) via Public Financial Management System (PFMS). Expected credit within 48-72 hours.
-            </div>
 
             <div style="border-top:1px solid #f1f5f9;padding-top:16px;font-size:11px;color:#94a3b8;text-align:center;line-height:1.5">
               Agricultural Produce Market Committee (APMC) • Government of India<br>
-              National Agriculture Market (e-NAM) & DBT Directorate
+              AgriQueue Smart Mandi & Direct Benefit Transfer
             </div>
           </div>
         </div>
@@ -356,8 +334,8 @@ export const EMAIL_TEMPLATES = {
   }),
 
   PAYMENT_CREDITED: ({ name, amount, bank, utr, receiptId }) => ({
-    subject: `💰 ₹${Number(amount).toLocaleString('en-IN')} DBT Payment Credited — KrishiSlot APMC`,
-    text: `Namaste ${name || 'Farmer Friend'},\n\nYour MSP payment of ₹${Number(amount).toLocaleString('en-IN')} for J-Form #${receiptId} has been credited to your bank account at ${bank}.\n\nBank UTR: ${utr}\n\nKrishiSlot APMC Portal`,
+    subject: `💰 ₹${Number(amount).toLocaleString('en-IN')} DBT Payment Credited — AgriQueue APMC`,
+    text: `Namaste ${name || 'Farmer Friend'},\n\nYour MSP payment of ₹${Number(amount).toLocaleString('en-IN')} for J-Form #${receiptId} has been credited to your bank account at ${bank}.\n\nBank UTR: ${utr}\n\nAgriQueue APMC Portal`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -384,7 +362,7 @@ export const EMAIL_TEMPLATES = {
 
             <div style="border-top:1px solid #f1f5f9;padding-top:16px;font-size:11px;color:#94a3b8;text-align:center;line-height:1.5">
               Agricultural Produce Market Committee (APMC) • Government of India<br>
-              Direct Benefit Transfer (DBT) Mission
+              AgriQueue Direct Benefit Transfer (DBT) Mission
             </div>
           </div>
         </div>
@@ -400,7 +378,7 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
     throw new Error('Please enter a valid email address.');
   }
 
-  let templateContent = { subject: customSubject || 'KrishiSlot Notification', text: '', html: customHtml || '' };
+  let templateContent = { subject: customSubject || 'AgriQueue Notification', text: '', html: customHtml || '' };
   if (EMAIL_TEMPLATES[type]) {
     templateContent = EMAIL_TEMPLATES[type]({ name: recipientName, ...data });
   }
@@ -419,17 +397,26 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
     isReal: false
   };
 
-  // 1. Priority: HTTP-based REST Email Gateway (Over HTTPS Port 443 - NEVER blocked by cloud/Render firewalls)
+  // 1. Priority: HTTP-based REST Email Gateway (Resend SDK)
   const resendKey = (process.env.RESEND_API_KEY || '').trim();
-  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+  const resendFrom = process.env.RESEND_FROM || 'AgriQueue <onboarding@resend.dev>';
+  const isOnboardingDomain = resendFrom.includes('onboarding@resend.dev');
 
-  // Only attempt Resend if key is provided and not the default unreplaced placeholder
-  if (resendKey && resendKey !== 're_xxxxxxxxx' && !resendKey.includes('xxxx')) {
+  // Resend on free onboarding@resend.dev strictly limits recipients to account owner (vanshmavi018@gmail.com).
+  // If sending to ANY other recipient, route immediately to Gmail SMTP to deliver in 1-2 seconds with zero 403 error.
+  const canSendViaResend = Boolean(
+    resendKey && 
+    resendKey !== 're_xxxxxxxxx' && 
+    !resendKey.includes('xxxx') && 
+    (!isOnboardingDomain || cleanEmail === 'vanshmavi018@gmail.com')
+  );
+
+  if (canSendViaResend) {
     try {
       console.log(`[EMAIL GATEWAY] Dispatching via Resend SDK (HTTPS Port 443) to ${cleanEmail}...`);
       const resendClient = new Resend(process.env.RESEND_API_KEY || resendKey);
       const resendResponse = await resendClient.emails.send({
-        from: process.env.RESEND_FROM || 'KrishiSlot <onboarding@resend.dev>',
+        from: resendFrom,
         to: cleanEmail,
         subject: templateContent.subject,
         html: templateContent.html,
@@ -459,50 +446,12 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
     }
   }
 
-  if (brevoKey) {
-    try {
-      console.log(`[EMAIL GATEWAY] Dispatching via Brevo HTTPS API (Port 443) to ${cleanEmail}...`);
-      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'api-key': brevoKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender: { name: 'KrishiSlot', email: process.env.BREVO_SENDER || 'vanshmavi018@gmail.com' },
-          to: [{ email: cleanEmail, name: recipientName }],
-          subject: templateContent.subject,
-          htmlContent: templateContent.html,
-          textContent: templateContent.text
-        })
-      });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.message || 'Brevo HTTP API failed');
-
-      emailRecord.status = 'SENT';
-      emailRecord.provider = 'BREVO_HTTPS';
-      emailRecord.messageId = resData.messageId;
-      emailRecord.isReal = true;
-      console.log(`\n[REAL BREVO DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (ID: ${resData.messageId})\n`);
-
-      if (data?.otp) {
-        console.log(`🔑 [OTP DISPATCH] Destination: ${cleanEmail} | Verification Code: ${data.otp} | Real Email Sent: true\n`);
-      }
-      dispatchedEmails.unshift(emailRecord);
-      if (dispatchedEmails.length > 50) dispatchedEmails.pop();
-      emailEvents.emit('email_sent', emailRecord);
-      return emailRecord;
-    } catch (httpErr) {
-      console.warn('[BREVO WARNING] Failed via Brevo HTTPS API:', httpErr.message);
-    }
-  }
-
-  // 2. Fallback: Direct SMTP (Port 465 / 587)
+  // 2. High-speed Direct Google SMTP Gateway (Port 465 SSL / Port 587 STARTTLS)
   const { primary, fallback } = await getTransporters();
   const config = getEmailGatewayConfig();
 
   if (primary && config) {
-    const fromAddress = `"KrishiSlot" <${config.user}>`;
+    const fromAddress = `"AgriQueue" <${config.user}>`;
     const mailOptions = {
       from: fromAddress,
       to: cleanEmail,
@@ -522,10 +471,10 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
     let usedPort = 465;
 
     try {
-      console.log(`[EMAIL GATEWAY] Sending live email via IPv4 SSL 465 to ${cleanEmail}...`);
+      console.log(`[EMAIL GATEWAY] Sending live email via Google SMTP (Port 465) to ${cleanEmail}...`);
       info = await primary.sendMail(mailOptions);
     } catch (err465) {
-      console.warn(`[EMAIL GATEWAY] Port 465 attempt failed: ${err465.message}. Retrying via Port 587 STARTTLS (IPv4)...`);
+      console.warn(`[EMAIL GATEWAY] Port 465 attempt: ${err465.message}. Retrying via Port 587 STARTTLS...`);
       try {
         if (fallback) {
           usedPort = 587;

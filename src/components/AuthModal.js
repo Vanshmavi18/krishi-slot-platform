@@ -59,7 +59,7 @@ export class AuthModal {
         this.authMode = 'otp';
       }
     } else if (defaultTab === 'admin') {
-      this.currentEmail = this.adminSaved?.identifier || 'admin@krishislot.in';
+      this.currentEmail = this.adminSaved?.identifier || 'admin@agriqueue.in';
       this.authMode = 'password';
     } else if (defaultTab === 'buyer') {
       this.currentEmail = this.buyerSaved?.identifier || 'buyer@agrocorp.in';
@@ -306,7 +306,7 @@ export class AuthModal {
           <!-- Modal Brand Header -->
           <div class="auth-brand-header">
             <div class="auth-brand-icon">🌱</div>
-            <h2 class="auth-brand-title">KrishiSlot Login</h2>
+            <h2 class="auth-brand-title">AgriQueue Login</h2>
             <p class="auth-brand-subtitle">Smart Mandi Slot Booking & Unified Procurement</p>
           </div>
 
@@ -517,8 +517,8 @@ export class AuthModal {
                     type="${this.activeTab === 'farmer' ? 'email' : 'text'}" 
                     value="${defaultIdent}" 
                     placeholder="${
-                      this.activeTab === 'farmer' ? 'ramesh.farmer@krishislot.in' :
-                      this.activeTab === 'admin' ? 'APMC-ADMIN or admin@krishislot.in' :
+                      this.activeTab === 'farmer' ? 'ramesh.farmer@agriqueue.in' :
+                      this.activeTab === 'admin' ? 'APMC-ADMIN or admin@agriqueue.in' :
                       'BUYER-01 or buyer@agrocorp.in'
                     }" 
                     autocomplete="username"

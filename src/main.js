@@ -12,11 +12,10 @@ import { renderProcurements } from './components/Procurements.js';
 import { renderCentreOperations } from './components/CentreOperations.js';
 import { renderBuyerDashboard } from './components/BuyerDashboard.js';
 import { NotificationCenter } from './components/NotificationCenter.js';
-import { VirtualPhone } from './components/VirtualPhone.js';
 import { AuthModal } from './components/AuthModal.js';
 import { ReceiptModal } from './components/ReceiptModal.js';
 
-class KrishiSlotApp {
+class AgriQueueApp {
   constructor() {
     this.user = api.currentUser || null;
     
@@ -63,16 +62,13 @@ class KrishiSlotApp {
     this.notifications = [];
     this.unreadNotifCount = 0;
 
-    this.virtualPhone = null;
     this.authModal = null;
     this.receiptModal = null;
     this.notificationCenter = null;
   }
 
   async init() {
-    // Initialize Modals, Notification Center & Virtual Phone
-    this.virtualPhone = new VirtualPhone(api, () => {});
-    
+    // Initialize Modals & Notification Center
     this.notificationCenter = new NotificationCenter({
       api,
       onNavigate: (view) => {
@@ -455,7 +451,6 @@ class KrishiSlotApp {
 
     // Topbar events
     document.getElementById('btn-toggle-lang')?.addEventListener('click', () => this.toggleLanguage());
-    document.getElementById('btn-topbar-sms')?.addEventListener('click', () => this.virtualPhone.toggle(true));
     document.getElementById('btn-topbar-notif')?.addEventListener('click', () => this.notificationCenter.toggle());
     document.getElementById('sidebar-notif-btn')?.addEventListener('click', () => this.notificationCenter.toggle(true));
     document.getElementById('quick-role-switch')?.addEventListener('change', (e) => this.switchRole(e.target.value));
@@ -490,9 +485,7 @@ class KrishiSlotApp {
       link.addEventListener('click', () => {
         closeMobileDrawer();
         const view = link.getAttribute('data-view');
-        if (view === 'sms') {
-          this.virtualPhone.toggle(true);
-        } else if (view === 'notifications') {
+        if (view === 'notifications') {
           this.notificationCenter.toggle(true);
         } else if (view) {
           this.currentView = view;
@@ -537,7 +530,7 @@ class KrishiSlotApp {
       this.render();
     });
     document.getElementById('dash-quick-sms')?.addEventListener('click', () => {
-      this.virtualPhone.toggle(true);
+      this.notificationCenter.toggle(true);
     });
     document.getElementById('dash-view-all-history')?.addEventListener('click', () => {
       this.currentView = 'procurements';
@@ -591,8 +584,7 @@ class KrishiSlotApp {
       this.handleAdvanceQueue();
     });
     document.getElementById('btn-set-arrival-reminder')?.addEventListener('click', () => {
-      this.showToast('✅ Proximity alert active! You will receive both SMS and in-app alert at 5 tokens away.');
-      this.virtualPhone.toggle(true);
+      this.showToast('✅ Proximity alert active! You will receive an alert when your token is within 5 turns.');
     });
 
     // Procurements actions
@@ -848,7 +840,6 @@ class KrishiSlotApp {
             user: this.user,
             language: this.language,
             t,
-            unreadSmsCount: this.virtualPhone?.unreadCount || 0,
             unreadNotifCount: this.unreadNotifCount || 0
           })}
           ${contentHtml}
@@ -861,5 +852,5 @@ class KrishiSlotApp {
 }
 
 // Instantiate and start app
-window.krishiApp = new KrishiSlotApp();
-window.krishiApp.init();
+window.agriQueueApp = new AgriQueueApp();
+window.agriQueueApp.init();

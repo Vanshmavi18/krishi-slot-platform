@@ -119,7 +119,7 @@ export function renderLandingPage({ language, t }) {
 
           <div class="floating-badge" style="margin-bottom:8px">
             <span class="pulse-dot"></span>
-            <span>Live Real-Time Notification & SMS Sync (VK-KRISHI)</span>
+            <span>Live Real-Time Notification & Email OTP Sync (AgriQueue)</span>
           </div>
 
           <div style="background:rgba(255,255,255,0.15);backdrop-filter:blur(10px);border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#fff">

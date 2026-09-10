@@ -1,6 +1,6 @@
 // src/components/Topbar.js
 
-export function renderTopbar({ user, language, t, unreadSmsCount = 0, unreadNotifCount = 0 }) {
+export function renderTopbar({ user, language, t, unreadNotifCount = 0 }) {
   const currentRole = (user?.role || 'farmer').toLowerCase();
   
   let roleLabel = 'Farmer (Seller)';
@@ -23,7 +23,7 @@ export function renderTopbar({ user, language, t, unreadSmsCount = 0, unreadNoti
 
         <div class="topbar-brand-mobile">
           <span class="topbar-brand-icon">🌱</span>
-          <span class="topbar-brand-text">KrishiSlot</span>
+          <span class="topbar-brand-text">AgriQueue</span>
         </div>
 
         <div class="topbar-greeting">
@@ -52,12 +52,6 @@ export function renderTopbar({ user, language, t, unreadSmsCount = 0, unreadNoti
         <button id="btn-topbar-notif" class="icon-btn notif-bell-btn" title="Open Notifications" aria-label="Notifications">
           <span>🔔</span>
           ${unreadNotifCount > 0 ? `<span class="icon-badge notif-badge">${unreadNotifCount}</span>` : ''}
-        </button>
-
-        <!-- SMS Alert Mobile Hub -->
-        <button id="btn-topbar-sms" class="icon-btn" title="Open Mandi SMS Hub" aria-label="Mandi SMS Alerts">
-          <span>📱</span>
-          ${unreadSmsCount > 0 ? `<span class="icon-badge"></span>` : ''}
         </button>
 
         <!-- User Profile Pill -->

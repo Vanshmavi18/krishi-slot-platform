@@ -84,7 +84,7 @@ export async function bookSlot({ farmerId, farmerName, farmerPhone, farmerEmail,
     status: 'CONFIRMED',
     queueStatus: 'WAITING',
     createdAt: new Date().toISOString(),
-    qrCodeData: `KRISHISLOT|${bookingId}|${token}|${farmerId}|${quantity}QTL`
+    qrCodeData: `AGRIQUEUE|${bookingId}|${token}|${farmerId}|${quantity}QTL`
   };
 
   db.insert('bookings', newBooking);
@@ -175,7 +175,7 @@ export async function cancelSlot(bookingId, farmerId) {
     phone: booking.farmerPhone,
     recipientName: booking.farmerName,
     type: 'CUSTOM',
-    customText: `प्रिय ${booking.farmerName}, आपका टोकन #${booking.token} का स्लॉट सफलतापूर्वक रद्द कर दिया गया है। - कृषि स्लॉट (KrishiSlot)`
+    customText: `प्रिय ${booking.farmerName}, आपका टोकन #${booking.token} का स्लॉट सफलतापूर्वक रद्द कर दिया गया है। - एग्रीक्यू (AgriQueue)`
   });
 
   return { success: true, message: 'Booking cancelled successfully' };

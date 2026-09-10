@@ -14,7 +14,8 @@ import {
   quickSwitch,
   loginWithMobilePassword,
   checkPhoneAuth,
-  saveUserPassword
+  saveUserPassword,
+  updateUserProfile
 } from '../services/authService.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -178,6 +179,18 @@ router.post('/save-password', (req, res) => {
     const { password } = req.body;
     const result = saveUserPassword(target, password);
     res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Update profile details
+router.put('/profile', (req, res) => {
+  try {
+    const { userId, ...updates } = req.body;
+    if (!userId) throw new Error('User ID is required.');
+    const result = updateUserProfile(userId, updates);
+    res.json({ success: true, user: result });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
