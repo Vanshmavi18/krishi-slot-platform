@@ -13,6 +13,9 @@ try {
 // Load .env variables
 dotenv.config();
 
+// Initialize Resend client with environment API key
+export const resend = new Resend(process.env.RESEND_API_KEY || 're_not_set');
+
 export const emailEvents = new EventEmitter();
 
 // In-memory log of dispatched emails
@@ -424,8 +427,8 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
   if (resendKey && resendKey !== 're_xxxxxxxxx' && !resendKey.includes('xxxx')) {
     try {
       console.log(`[EMAIL GATEWAY] Dispatching via Resend SDK (HTTPS Port 443) to ${cleanEmail}...`);
-      const resend = new Resend(resendKey);
-      const resendResponse = await resend.emails.send({
+      const resendClient = new Resend(process.env.RESEND_API_KEY || resendKey);
+      const resendResponse = await resendClient.emails.send({
         from: process.env.RESEND_FROM || 'onboarding@resend.dev',
         to: cleanEmail,
         subject: templateContent.subject,
