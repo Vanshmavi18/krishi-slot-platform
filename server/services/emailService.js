@@ -64,6 +64,14 @@ export function getEmailGatewayStatus() {
   };
 }
 
+// Custom DNS lookup that strictly forces IPv4, completely eliminating ENETUNREACH on Render/cloud Linux containers
+const forceIpv4Lookup = (hostname, options, callback) => {
+  dns.lookup(hostname, { family: 4 }, (err, address, family) => {
+    if (err) return callback(err);
+    callback(null, address, 4);
+  });
+};
+
 // Cached Dual Transporters (Port 465 SSL + Port 587 STARTTLS with forced IPv4)
 let primaryTransporter = null;
 let fallbackTransporter = null;
@@ -85,13 +93,17 @@ export function getTransporters() {
           user: config.user,
           pass: config.pass
         },
-        family: 4, // CRITICAL: forces IPv4 to prevent ENETUNREACH on Render/Docker
+        lookup: forceIpv4Lookup, // CRITICAL: forces IPv4 resolution, completely preventing ENETUNREACH on Render/Docker
         pool: true,
         maxConnections: 5,
         maxMessages: 100,
-        connectionTimeout: 8000,
-        greetingTimeout: 6000,
-        socketTimeout: 12000
+        tls: {
+          servername: 'smtp.gmail.com',
+          rejectUnauthorized: false
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 8000,
+        socketTimeout: 15000
       };
 
       // Primary: SSL port 465 with forced IPv4
@@ -107,9 +119,6 @@ export function getTransporters() {
         host: 'smtp.gmail.com',
         port: 587,
         secure: false,
-        tls: {
-          rejectUnauthorized: false
-        },
         ...baseOptions
       });
     } else {
@@ -117,7 +126,7 @@ export function getTransporters() {
         host: config.host,
         port: config.port,
         secure: config.secure,
-        family: 4,
+        lookup: forceIpv4Lookup,
         pool: true,
         maxConnections: 5,
         maxMessages: 100,
