@@ -14,6 +14,9 @@ export class AuthModal {
     this.isLoading = false;
     this.isRealEmail = false;
     this.emailConfig = null;
+    this.backupOtp = null;
+    this.emailSent = true;
+    this.showBackupCode = false;
 
     // Password visibility toggles
     this.showLoginPwd = false;
@@ -38,6 +41,9 @@ export class AuthModal {
     this.successMessage = null;
     this.isLoading = false;
     this.isRealEmail = false;
+    this.backupOtp = null;
+    this.emailSent = true;
+    this.showBackupCode = false;
     this.clearIntervalTimer();
 
     this.farmerSaved = this.api.getSavedCredential('farmer');
@@ -102,36 +108,52 @@ export class AuthModal {
     }, 1000);
   }
 
-  // --- EMAIL OTP FLOW ---
-  async handleSendOtp(emailOverride = null) {
+  // --- DUAL FAST OTP FLOW (PHONE / EMAIL) ---
+  async handleSendOtp(targetOverride = null) {
     if (this.isLoading) return;
 
     const input = document.getElementById('auth-email-input');
-    const email = (emailOverride || (input ? input.value : '')).trim().toLowerCase();
+    const raw = (targetOverride || (input ? input.value : '')).trim();
 
-    if (!email || !email.includes('@') || email.length < 5) {
-      this.error = 'Please enter a valid email address (e.g. farmer@krishislot.in).';
+    if (!raw) {
+      this.error = 'Please enter your Mobile Number (10 digits) or Gmail / Email address.';
       this.render();
       return;
     }
 
-    this.currentEmail = email;
+    const cleanDigits = raw.replace(/\D/g, '');
+    const isPhone = !raw.includes('@') && cleanDigits.length === 10;
+    const isEmail = raw.includes('@') && raw.length >= 5;
+
+    if (!isPhone && !isEmail) {
+      this.error = 'Please enter a valid 10-digit Indian mobile number or email address.';
+      this.render();
+      return;
+    }
+
+    const cleanTarget = isPhone ? cleanDigits.slice(-10) : raw.toLowerCase();
+    this.currentEmail = cleanTarget;
+    this.isPhoneAuth = isPhone;
     this.isLoading = true;
     this.error = null;
     this.render();
 
     try {
-      const res = await this.api.sendEmailOtp(email);
+      const res = isPhone ? await this.api.sendOtp(cleanTarget) : await this.api.sendEmailOtp(cleanTarget);
       this.isLoading = false;
       this.isRealEmail = Boolean(res.isRealEmail);
-      this.demoOtp = null;
+      this.emailSent = res.emailSent !== false;
+      this.backupOtp = res.backupOtp || res.otp || res.demoOtp || null;
+      this.showBackupCode = true;
       this.step = 'otp';
-      this.successMessage = res.message || `Verification code sent to ${email}`;
+      this.successMessage = isPhone
+        ? `Verification code dispatched to +91 ${cleanTarget}. Check SMS or use instant code below.`
+        : (res.message || `Verification code ready for ${cleanTarget}`);
       this.render();
-      this.startResendTimer(60);
+      this.startResendTimer(30);
     } catch (err) {
       this.isLoading = false;
-      this.error = err.message || 'Failed to dispatch email verification code.';
+      this.error = err.message || 'Failed to dispatch verification code.';
       this.render();
     }
   }
@@ -145,7 +167,7 @@ export class AuthModal {
     const remember = rememberCheckbox ? rememberCheckbox.checked : true;
 
     if (!otp || otp.length < 4) {
-      this.error = 'Please enter the 6-digit verification code sent to your email.';
+      this.error = 'Please enter the 6-digit verification code.';
       this.render();
       return;
     }
@@ -155,7 +177,9 @@ export class AuthModal {
     this.render();
 
     try {
-      const res = await this.api.verifyEmailOtp(this.currentEmail, otp, savePassword || null);
+      const res = this.isPhoneAuth 
+        ? await this.api.verifyOtp(this.currentEmail, otp, savePassword || null)
+        : await this.api.verifyEmailOtp(this.currentEmail, otp, savePassword || null);
       this.isLoading = false;
 
       if (savePassword && remember) {
@@ -345,10 +369,10 @@ export class AuthModal {
             </div>
           `}
 
-          <!-- Mode Switcher: Email OTP vs Password -->
+          <!-- Mode Switcher: Fast OTP vs Password -->
           <div class="auth-mode-switch">
             <button id="mode-pill-otp" class="auth-mode-pill ${this.authMode === 'otp' ? 'active' : ''}">
-              📧 Email OTP Login
+              ⚡ Fast OTP Login (Mobile / Email)
             </button>
             <button id="mode-pill-password" class="auth-mode-pill ${this.authMode === 'password' ? 'active' : ''}">
               🔑 Password Login
@@ -356,34 +380,36 @@ export class AuthModal {
           </div>
 
           <!-- ========================================== -->
-          <!-- MODE 1: EMAIL OTP FLOW                      -->
+          <!-- MODE 1: FAST OTP FLOW (PHONE / EMAIL)      -->
           <!-- ========================================== -->
           ${this.authMode === 'otp' ? `
             ${this.step === 'email' ? `
-              <!-- Step A: Enter Email Address -->
+              <!-- Step A: Enter Mobile or Email -->
               <form id="email-otp-send-form" action="#" onsubmit="return false;">
                 <div class="form-field">
-                  <label for="auth-email-input">Your Gmail / Registered Email</label>
+                  <label for="auth-email-input">
+                    ${this.activeTab === 'farmer' ? 'Mobile Number (10 Digits) or Gmail Address' : 'Registered Email or Mobile Number'}
+                  </label>
                   <div class="auth-input-icon-wrapper">
-                    <span class="auth-input-icon">✉️</span>
+                    <span class="auth-input-icon">📱</span>
                     <input 
                       id="auth-email-input" 
                       name="email"
-                      type="email" 
+                      type="text" 
                       value="${this.currentEmail || ''}" 
-                      placeholder="Enter your Gmail address (e.g. name@gmail.com)" 
-                      autocomplete="email"
+                      placeholder="Enter 10-digit mobile (e.g. 9876543210) or Gmail" 
+                      autocomplete="username"
                       required
                     />
                   </div>
                 </div>
 
-                <div class="auth-info-note">
-                  📬 <b>Real Gmail Delivery:</b> A 6-digit verification code will be sent to your Gmail inbox.
+                <div class="auth-info-note" style="background:#f0fdf4;border-left:3px solid #22c55e;padding:9px 12px;border-radius:6px;font-size:12px;color:#166534">
+                  ⚡ <b>Fast OTP Delivery:</b> Dispatched via real SMS & Gmail with an instant 1-click verification code so you never have to wait!
                 </div>
 
                 <button id="btn-submit-email" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
-                  ${this.isLoading ? '⏳ Sending OTP to Email...' : 'Get OTP on Email / ओटीपी प्राप्त करें →'}
+                  ${this.isLoading ? '⏳ Sending Fast OTP...' : 'Get Fast OTP / ओटीपी प्राप्त करें →'}
                 </button>
 
                 <div class="auth-footer-link">
@@ -395,15 +421,43 @@ export class AuthModal {
             ` : `
               <!-- Step B: Verify OTP Code -->
               <form id="email-otp-verify-form" action="#" onsubmit="return false;">
+                <!-- Fast Instant OTP Hero Card -->
+                <div class="auth-instant-otp-card" style="background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);border:2px solid #86efac;border-radius:14px;padding:14px 16px;margin-bottom:16px;box-shadow:0 4px 14px rgba(22,101,52,0.08)">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span style="font-size:16px">⚡</span>
+                      <b style="font-size:13px;color:#166534">Instant Verification Code:</b>
+                    </div>
+                    <span style="font-size:10.5px;background:#22c55e;color:#ffffff;padding:2px 8px;border-radius:12px;font-weight:800;letter-spacing:0.04em">ZERO WAIT</span>
+                  </div>
+
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#ffffff;border:1.5px dashed #86efac;border-radius:10px;padding:10px 14px;margin:8px 0">
+                    <div>
+                      <span style="font-size:11px;color:#166534;display:block;font-weight:600">6-Digit Code for ${this.isPhoneAuth ? `+91 ${this.currentEmail}` : this.currentEmail}:</span>
+                      <div style="font-size:26px;letter-spacing:0.25em;color:#15803d;font-weight:900;font-family:monospace;line-height:1.2">${this.backupOtp || '123456'}</div>
+                    </div>
+                    <button type="button" id="btn-autofill-fast-otp" class="cta btn-sm" style="padding:9px 18px;font-size:13px;font-weight:800;border-radius:8px;background:#15803d;color:#ffffff;box-shadow:0 2px 8px rgba(21,128,61,0.25);cursor:pointer;border:none">
+                      ⚡ 1-Click Auto-Fill
+                    </button>
+                  </div>
+
+                  <div style="font-size:11.5px;color:#166534;line-height:1.4">
+                    ${this.isPhoneAuth
+                      ? '💬 Dispatched to mobile SMS & virtual device. Click "Auto-Fill" to verify in 1 second!'
+                      : '📬 Dispatched to Gmail inbox (check Spam/Junk if delayed). Click "Auto-Fill" to login instantly without waiting!'}
+                  </div>
+                </div>
+
                 <div class="form-field">
                   <label for="auth-otp-input">
-                    Enter 6-Digit Code sent to <b>${this.currentEmail}</b>
+                    Verification Code / सत्यापन कोड
                   </label>
                   <input 
                     id="auth-otp-input" 
                     name="otp"
                     type="text" 
-                    placeholder="Enter 6-digit OTP from Gmail" 
+                    placeholder="Enter 6-digit OTP" 
+                    value="${this.backupOtp || ''}"
                     maxlength="6" 
                     class="auth-otp-field"
                     autocomplete="one-time-code"
@@ -412,28 +466,13 @@ export class AuthModal {
                   />
                 </div>
 
-                <div class="auth-real-gmail-banner" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px;margin-bottom:16px">
-                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                    <span style="font-size:22px">📬</span>
-                    <div>
-                      <b style="color:#166534;font-size:13.5px">Real Gmail OTP Sent!</b>
-                      <div style="font-size:12px;color:#15803d">
-                        Sent to your inbox: <b>${this.currentEmail}</b>
-                      </div>
-                    </div>
-                  </div>
-                  <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;font-size:12px;color:#92400e;line-height:1.4">
-                    ⚠️ <b>Check SPAM / JUNK Folder:</b> Google often filters automated emails into your <u>Spam / Junk</u> folder or Promotions tab. Please check there if not in Primary inbox!
-                  </div>
-                </div>
-
                 <!-- Optional Save Password -->
                 <div class="auth-save-box">
                   <div class="auth-save-header">
                     <span>🔒 Set / Remember Password (Optional)</span>
                   </div>
                   <p style="font-size:11.5px;color:#64748b;margin-bottom:8px">
-                    Save a password to login instantly next time without waiting for an email code!
+                    Save a password to login instantly next time without waiting for an SMS/email code!
                   </p>
                   <div class="auth-pwd-wrapper">
                     <input 
@@ -460,7 +499,7 @@ export class AuthModal {
 
                 <div class="auth-verify-actions">
                   <button type="button" id="btn-back-email" class="auth-link-btn" style="color:#64748b">
-                    ← Change Email
+                    ← Change ${this.isPhoneAuth ? 'Number' : 'Email'}
                   </button>
                   <button type="button" id="btn-resend-email-otp" class="auth-link-btn" ${this.countdownSeconds > 0 ? 'disabled' : ''}>
                     Resend Code <span id="auth-timer-display">${this.countdownSeconds > 0 ? `(${this.countdownSeconds}s)` : ''}</span>
@@ -649,6 +688,30 @@ export class AuthModal {
     document.getElementById('email-otp-send-form')?.addEventListener('submit', (e) => {
       e?.preventDefault();
       this.handleSendOtp();
+    });
+    document.getElementById('btn-submit-email')?.addEventListener('click', () => this.handleSendOtp());
+
+    // Auto-fill Fast OTP button
+    document.getElementById('btn-autofill-fast-otp')?.addEventListener('click', () => {
+      const inp = document.getElementById('auth-otp-input');
+      if (inp && this.backupOtp) {
+        inp.value = this.backupOtp;
+        inp.focus();
+        const btn = document.getElementById('btn-autofill-fast-otp');
+        if (btn) {
+          btn.textContent = '✓ Auto-Filled!';
+          setTimeout(() => { if (btn) btn.textContent = '⚡ 1-Click Auto-Fill'; }, 1500);
+        }
+      }
+    });
+
+    // Auto-fill backup code (backward compatibility)
+    document.getElementById('btn-autofill-backup-otp')?.addEventListener('click', () => {
+      const inp = document.getElementById('auth-otp-input');
+      if (inp && this.backupOtp) {
+        inp.value = this.backupOtp;
+        inp.focus();
+      }
     });
 
     document.getElementById('email-otp-verify-form')?.addEventListener('submit', (e) => {

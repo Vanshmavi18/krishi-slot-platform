@@ -62,10 +62,13 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n======================================================`);
   console.log(`🌾 KrishiSlot API Server running on port ${PORT}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
   console.log(`📡 SSE Queue Stream: http://localhost:${PORT}/api/queue/stream`);
   console.log(`======================================================\n`);
 });
+
+export { app, server };
+export default app;

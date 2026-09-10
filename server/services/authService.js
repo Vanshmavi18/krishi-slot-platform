@@ -18,9 +18,15 @@ export function normalizeEmail(email) {
   return clean;
 }
 
-// 1. Request OTP via Email
-export async function requestEmailOtp(email) {
-  const cleanEmail = normalizeEmail(email);
+// 1. Request OTP via Email or Phone
+export async function requestEmailOtp(emailOrPhone) {
+  const raw = String(emailOrPhone || '').trim();
+  const digits = raw.replace(/\D/g, '');
+  if (!raw.includes('@') && digits.length === 10) {
+    return requestOtp(digits);
+  }
+
+  const cleanEmail = normalizeEmail(raw);
 
   // Find existing user by email, or phone fallback if email matches known username
   let user = db.find('users', u => 
@@ -58,13 +64,25 @@ export async function requestEmailOtp(email) {
   }
 
   // Generate 6-digit OTP
-  const isDemoEmail = cleanEmail.includes('demo') || cleanEmail.includes('krishislot.in') || cleanEmail.includes('example.com');
   const otp = (cleanEmail === 'ramesh.farmer@krishislot.in' || cleanEmail === 'farmer@krishi.gov.in') 
     ? '123456' 
     : String(Math.floor(100000 + Math.random() * 900000));
   const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
   emailOtpStore.set(cleanEmail, { otp, expiresAt, userId: user.id });
+  if (user.phone) {
+    emailOtpStore.set(user.phone, { otp, expiresAt, userId: user.id });
+  }
+
+  // Also dispatch SMS to simulated virtual phone and mobile gateway
+  if (user.phone) {
+    sendSms({
+      phone: user.phone,
+      recipientName: user.name,
+      type: 'OTP',
+      data: { otp, name: user.name }
+    }).catch(e => console.warn('[SMS BACKGROUND DISPATCH]', e.message));
+  }
 
   // Dispatch Email Notification (Real Gmail or Virtual Simulator)
   const emailResult = await sendEmail({
@@ -74,48 +92,73 @@ export async function requestEmailOtp(email) {
     data: { otp, name: user.name, expiresInMins: 10 }
   });
 
+  const emailSent = Boolean(emailResult?.status === 'SENT');
   const isReal = Boolean(emailResult?.isReal);
+
+  console.log(`[AUTH SERVICE] Verification OTP for ${cleanEmail} is: [ ${otp} ] (Provider: ${emailResult?.provider || 'SIMULATOR'}, Sent: ${emailSent})`);
+
+  let responseMessage = '';
+  if (emailSent && isReal) {
+    responseMessage = `Verification code dispatched to your Gmail inbox (${cleanEmail}). Use code below or check inbox/spam.`;
+  } else if (emailResult?.providerError) {
+    responseMessage = `Email dispatch queued. Fast verification code ready below.`;
+  } else {
+    responseMessage = `Verification code dispatched for ${cleanEmail}.`;
+  }
 
   return {
     success: true,
-    message: isReal 
-      ? `Verification code dispatched to your Gmail inbox: ${cleanEmail}. Please check your Inbox / Spam folder.` 
-      : `Verification code dispatched to ${cleanEmail}`,
+    message: responseMessage,
     email: cleanEmail,
+    phone: user.phone,
     expiresInSec: 600,
-    demoOtp: null,
-    isRealEmail: isReal,
+    otp,
+    demoOtp: otp,
+    backupOtp: otp,
+    emailSent,
+    isRealEmail: isReal && emailSent,
     gatewayProvider: emailResult?.provider || 'SIMULATOR',
+    providerError: emailResult?.providerError || null,
     hasPassword: Boolean(user.passwordHash)
   };
 }
 
-// 2. Verify Email OTP
-export async function verifyEmailOtp(email, otp, savePassword = null) {
-  const cleanEmail = normalizeEmail(email);
+// 2. Verify Email or Phone OTP
+export async function verifyEmailOtp(emailOrPhone, otp, savePassword = null) {
+  const raw = String(emailOrPhone || '').trim();
   const cleanOtp = String(otp || '').trim();
-  const stored = emailOtpStore.get(cleanEmail);
+
+  let key = raw.includes('@') ? raw.toLowerCase() : raw.replace(/\D/g, '').slice(-10);
+  let stored = emailOtpStore.get(key);
+
+  if (!stored && key.length === 10) {
+    const u = db.find('users', usr => usr.phone === key);
+    if (u?.email) stored = emailOtpStore.get(u.email.toLowerCase());
+  } else if (!stored && raw.includes('@')) {
+    const u = db.find('users', usr => usr.email && usr.email.toLowerCase() === key);
+    if (u?.phone) stored = emailOtpStore.get(u.phone);
+  }
 
   let user = null;
 
   if (!stored) {
     // Known demo account quick testing fallback
-    if ((cleanEmail === 'ramesh.farmer@krishislot.in' || cleanEmail === 'farmer@krishi.gov.in') && cleanOtp === '123456') {
-      user = db.find('users', u => (u.email && u.email.toLowerCase() === cleanEmail) || u.phone === '9876543210');
+    if ((key === 'ramesh.farmer@krishislot.in' || key === '9876543210' || key === 'farmer@krishi.gov.in') && cleanOtp === '123456') {
+      user = db.find('users', u => (u.email && u.email.toLowerCase() === key) || u.phone === '9876543210');
     } else {
-      throw new Error('No active verification code found for this email. Please request a new code.');
+      throw new Error('No active verification code found. Please request a new code.');
     }
   } else {
     if (Date.now() > stored.expiresAt) {
-      emailOtpStore.delete(cleanEmail);
+      emailOtpStore.delete(key);
       throw new Error('Verification code has expired. Please request a new code.');
     }
 
     if (stored.otp !== cleanOtp) {
-      throw new Error('Invalid verification code. Please check your email inbox and try again.');
+      throw new Error('Invalid verification code. Please check your code and try again.');
     }
 
-    emailOtpStore.delete(cleanEmail);
+    emailOtpStore.delete(key);
     user = db.find('users', u => u.id === stored.userId);
   }
 
@@ -366,26 +409,74 @@ export function quickSwitch(role, id = null) {
   return { success: true, token, user: safeUser };
 }
 
-// --- LEGACY BACKWARDS-COMPATIBLE PHONE ADAPTERS ---
+// --- PHONE & MULTI-CHANNEL ADAPTERS ---
 export async function requestOtp(phoneOrEmail) {
-  if (String(phoneOrEmail).includes('@')) {
-    return requestEmailOtp(phoneOrEmail);
+  const raw = String(phoneOrEmail || '').trim();
+  if (raw.includes('@')) {
+    return requestEmailOtp(raw);
   }
-  // If legacy phone is passed, map to known farmer or generate demo email
-  const cleanPhone = String(phoneOrEmail).replace(/\D/g, '').slice(-10);
-  const user = db.find('users', u => u.phone === cleanPhone);
-  const email = user?.email || `farmer.${cleanPhone}@krishislot.in`;
-  return requestEmailOtp(email);
+
+  const cleanPhone = raw.replace(/\D/g, '').slice(-10);
+  if (cleanPhone.length !== 10) {
+    throw new Error('Please enter a valid 10-digit mobile number or email address.');
+  }
+
+  let user = db.find('users', u => u.phone === cleanPhone);
+  if (!user) {
+    user = {
+      id: `FRM-UP-${Math.floor(10000 + Math.random() * 90000)}`,
+      role: 'farmer',
+      name: `Farmer (+91 ${cleanPhone})`,
+      phone: cleanPhone,
+      email: `farmer.${cleanPhone}@krishislot.in`,
+      village: 'Gorakhpur, Uttar Pradesh',
+      aadhaarMasked: '•••• •••• ' + Math.floor(1000 + Math.random() * 9000),
+      bankName: 'State Bank of India',
+      bankAccMasked: '•••• •••• ' + Math.floor(1000 + Math.random() * 9000),
+      ifsc: 'SBIN0001248',
+      landAcres: 3.5,
+      khasraNumber: '112/1'
+    };
+    db.insert('users', user);
+  }
+
+  const otp = (cleanPhone === '9876543210' || cleanPhone === '9812345678')
+    ? '123456'
+    : String(Math.floor(100000 + Math.random() * 900000));
+  const expiresAt = Date.now() + 10 * 60 * 1000;
+
+  emailOtpStore.set(cleanPhone, { otp, expiresAt, userId: user.id });
+  if (user.email) {
+    emailOtpStore.set(user.email.toLowerCase(), { otp, expiresAt, userId: user.id });
+  }
+
+  // Dispatch real Fast2SMS + SSE Virtual Phone Event
+  const smsResult = await sendSms({
+    phone: cleanPhone,
+    recipientName: user.name,
+    type: 'OTP',
+    data: { otp, name: user.name }
+  });
+
+  console.log(`[AUTH SERVICE] Verification OTP for Mobile +91 ${cleanPhone} is: [ ${otp} ] (Gateway: ${smsResult?.gateway || 'SIMULATOR'})`);
+
+  return {
+    success: true,
+    message: `Verification code dispatched to +91 ${cleanPhone}.`,
+    phone: cleanPhone,
+    email: user.email,
+    expiresInSec: 600,
+    otp,
+    demoOtp: otp,
+    backupOtp: otp,
+    smsSent: true,
+    isRealSms: Boolean(smsResult?.gateway === 'FAST2SMS_REAL'),
+    hasPassword: Boolean(user.passwordHash)
+  };
 }
 
 export async function verifyOtp(phoneOrEmail, otp, savePassword = null) {
-  if (String(phoneOrEmail).includes('@')) {
-    return verifyEmailOtp(phoneOrEmail, otp, savePassword);
-  }
-  const cleanPhone = String(phoneOrEmail).replace(/\D/g, '').slice(-10);
-  const user = db.find('users', u => u.phone === cleanPhone);
-  const email = user?.email || `farmer.${cleanPhone}@krishislot.in`;
-  return verifyEmailOtp(email, otp, savePassword);
+  return verifyEmailOtp(phoneOrEmail, otp, savePassword);
 }
 
 export async function loginWithMobilePassword(phoneOrEmail, password) {

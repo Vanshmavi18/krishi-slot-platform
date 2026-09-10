@@ -1659,6 +1659,23 @@ button, input, select, textarea {
   background: #d1fae5;
 }
 
+.auth-instant-otp-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-instant-otp-card:hover {
+  box-shadow: 0 6px 20px rgba(22, 101, 52, 0.15) !important;
+}
+#btn-autofill-fast-otp {
+  transition: all 0.2s ease;
+}
+#btn-autofill-fast-otp:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+#btn-autofill-fast-otp:active {
+  transform: translateY(1px);
+}
+
 .auth-verify-actions {
   display: flex;
   justify-content: space-between;
