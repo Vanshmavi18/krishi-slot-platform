@@ -1,5 +1,6 @@
 // server/services/emailService.js
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 import { EventEmitter } from 'events';
 import dns from 'dns';
@@ -57,6 +58,17 @@ export function getEmailGatewayConfig() {
 
 export function getEmailGatewayStatus() {
   const config = getEmailGatewayConfig();
+  const resendKey = (process.env.RESEND_API_KEY || '').trim();
+  const hasResend = Boolean(resendKey && resendKey !== 're_xxxxxxxxx' && !resendKey.includes('xxxx'));
+
+  if (hasResend) {
+    return {
+      configured: true,
+      gatewayType: 'RESEND_HTTPS',
+      senderEmail: process.env.RESEND_FROM || 'onboarding@resend.dev'
+    };
+  }
+
   return {
     configured: Boolean(config),
     gatewayType: config ? config.type : 'SIMULATOR',
@@ -408,31 +420,29 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
   const resendKey = (process.env.RESEND_API_KEY || '').trim();
   const brevoKey = (process.env.BREVO_API_KEY || '').trim();
 
-  if (resendKey) {
+  // Only attempt Resend if key is provided and not the default unreplaced placeholder
+  if (resendKey && resendKey !== 're_xxxxxxxxx' && !resendKey.includes('xxxx')) {
     try {
-      console.log(`[EMAIL GATEWAY] Dispatching via Resend HTTPS API (Port 443) to ${cleanEmail}...`);
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: process.env.RESEND_FROM || 'KrishiSlot <onboarding@resend.dev>',
-          to: [cleanEmail],
-          subject: templateContent.subject,
-          html: templateContent.html,
-          text: templateContent.text
-        })
+      console.log(`[EMAIL GATEWAY] Dispatching via Resend SDK (HTTPS Port 443) to ${cleanEmail}...`);
+      const resend = new Resend(resendKey);
+      const resendResponse = await resend.emails.send({
+        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+        to: cleanEmail,
+        subject: templateContent.subject,
+        html: templateContent.html,
+        text: templateContent.text
       });
-      const resData = await res.json();
-      if (!res.ok) throw new Error(resData.message || resData.error || 'Resend HTTP API failed');
 
+      if (resendResponse.error) {
+        throw new Error(resendResponse.error.message || 'Resend SDK dispatch error');
+      }
+
+      const messageId = resendResponse.data?.id || resendResponse.id || `resend-${Date.now()}`;
       emailRecord.status = 'SENT';
       emailRecord.provider = 'RESEND_HTTPS';
-      emailRecord.messageId = resData.id;
+      emailRecord.messageId = messageId;
       emailRecord.isReal = true;
-      console.log(`\n[REAL RESEND DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (ID: ${resData.id})\n`);
+      console.log(`\n[REAL RESEND DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (MessageId: ${messageId})\n`);
 
       if (data?.otp) {
         console.log(`🔑 [OTP DISPATCH] Destination: ${cleanEmail} | Verification Code: ${data.otp} | Real Email Sent: true\n`);
@@ -441,8 +451,8 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
       if (dispatchedEmails.length > 50) dispatchedEmails.pop();
       emailEvents.emit('email_sent', emailRecord);
       return emailRecord;
-    } catch (httpErr) {
-      console.warn('[RESEND WARNING] Failed via Resend HTTPS API:', httpErr.message);
+    } catch (resendErr) {
+      console.warn('[RESEND WARNING] Failed via Resend SDK:', resendErr.message);
     }
   }
 
