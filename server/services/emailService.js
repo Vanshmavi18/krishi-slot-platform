@@ -64,20 +64,27 @@ export function getEmailGatewayStatus() {
   };
 }
 
-// Custom DNS lookup that strictly forces IPv4, completely eliminating ENETUNREACH on Render/cloud Linux containers
-const forceIpv4Lookup = (hostname, options, callback) => {
-  dns.lookup(hostname, { family: 4 }, (err, address, family) => {
-    if (err) return callback(err);
-    callback(null, address, 4);
-  });
-};
+import dnsPromises from 'dns/promises';
+
+// Resolve an explicit IPv4 address for smtp.gmail.com to guarantee zero IPv6 attempts on Render/Docker
+async function resolveGmailIpv4() {
+  try {
+    const ips = await dnsPromises.resolve4('smtp.gmail.com');
+    if (ips && ips.length > 0) {
+      return ips[0];
+    }
+  } catch (e) {
+    console.warn('[DNS WARNING] IPv4 resolution error, using fallback IPv4:', e.message);
+  }
+  return '142.250.102.108'; // Highly reliable Google SMTP IPv4 Anycast address
+}
 
 // Cached Dual Transporters (Port 465 SSL + Port 587 STARTTLS with forced IPv4)
 let primaryTransporter = null;
 let fallbackTransporter = null;
 let lastConfigHash = '';
 
-export function getTransporters() {
+export async function getTransporters() {
   const config = getEmailGatewayConfig();
   if (!config) return { primary: null, fallback: null };
 
@@ -88,35 +95,37 @@ export function getTransporters() {
 
   try {
     if (config.type === 'GMAIL') {
+      const ipv4Host = await resolveGmailIpv4();
+      console.log(`[EMAIL GATEWAY] Using resolved IPv4 host for Gmail: ${ipv4Host}`);
+
       const baseOptions = {
         auth: {
           user: config.user,
           pass: config.pass
         },
-        lookup: forceIpv4Lookup, // CRITICAL: forces IPv4 resolution, completely preventing ENETUNREACH on Render/Docker
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
         tls: {
           servername: 'smtp.gmail.com',
           rejectUnauthorized: false
         },
+        pool: true,
+        maxConnections: 5,
+        maxMessages: 100,
         connectionTimeout: 10000,
         greetingTimeout: 8000,
         socketTimeout: 15000
       };
 
-      // Primary: SSL port 465 with forced IPv4
+      // Primary: SSL port 465 with forced IPv4 literal
       primaryTransporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
+        host: ipv4Host,
         port: 465,
         secure: true,
         ...baseOptions
       });
 
-      // Fallback: STARTTLS port 587 with forced IPv4
+      // Fallback: STARTTLS port 587 with forced IPv4 literal
       fallbackTransporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
+        host: ipv4Host,
         port: 587,
         secure: false,
         ...baseOptions
@@ -126,7 +135,6 @@ export function getTransporters() {
         host: config.host,
         port: config.port,
         secure: config.secure,
-        lookup: forceIpv4Lookup,
         pool: true,
         maxConnections: 5,
         maxMessages: 100,
@@ -153,8 +161,8 @@ export function getTransporters() {
   }
 }
 
-export function getTransporter() {
-  const { primary } = getTransporters();
+export async function getTransporter() {
+  const { primary } = await getTransporters();
   return primary;
 }
 
@@ -396,7 +404,7 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
     isReal: false
   };
 
-  const { primary, fallback } = getTransporters();
+  const { primary, fallback } = await getTransporters();
   const config = getEmailGatewayConfig();
 
   if (primary && config) {
