@@ -7,7 +7,7 @@ export class AuthModal {
     this.activeTab = 'farmer'; // 'farmer' | 'admin' | 'buyer'
     this.authMode = 'otp'; // 'otp' | 'password'
     this.step = 'email'; // 'email' | 'otp'
-    this.currentEmail = 'ramesh.farmer@krishislot.in';
+    this.currentEmail = '';
     this.demoOtp = '';
     this.error = null;
     this.successMessage = null;
@@ -52,10 +52,10 @@ export class AuthModal {
 
     if (defaultTab === 'farmer') {
       if (this.farmerSaved?.password) {
-        this.currentEmail = this.farmerSaved.email || 'ramesh.farmer@krishislot.in';
+        this.currentEmail = this.farmerSaved.email || '';
         this.authMode = 'password';
       } else {
-        this.currentEmail = 'ramesh.farmer@krishislot.in';
+        this.currentEmail = this.farmerSaved?.email || '';
         this.authMode = 'otp';
       }
     } else if (defaultTab === 'admin') {
@@ -388,28 +388,28 @@ export class AuthModal {
               <form id="email-otp-send-form" action="#" onsubmit="return false;">
                 <div class="form-field">
                   <label for="auth-email-input">
-                    ${this.activeTab === 'farmer' ? 'Mobile Number (10 Digits) or Gmail Address' : 'Registered Email or Mobile Number'}
+                    Your Real Gmail Address / रजिस्टर्ड ईमेल
                   </label>
                   <div class="auth-input-icon-wrapper">
-                    <span class="auth-input-icon">📱</span>
+                    <span class="auth-input-icon">✉️</span>
                     <input 
                       id="auth-email-input" 
                       name="email"
                       type="text" 
                       value="${this.currentEmail || ''}" 
-                      placeholder="Enter 10-digit mobile (e.g. 9876543210) or Gmail" 
+                      placeholder="Enter your Gmail address (e.g. name@gmail.com)" 
                       autocomplete="username"
                       required
                     />
                   </div>
                 </div>
 
-                <div class="auth-info-note" style="background:#f0fdf4;border-left:3px solid #22c55e;padding:9px 12px;border-radius:6px;font-size:12px;color:#166534">
-                  ⚡ <b>Fast OTP Delivery:</b> Dispatched via real SMS & Gmail with an instant 1-click verification code so you never have to wait!
+                <div class="auth-info-note" style="background:#eff6ff;border-left:3px solid #2563eb;padding:9px 12px;border-radius:6px;font-size:12px;color:#1e40af">
+                  📬 <b>Live Gmail Inbox Delivery:</b> Enter your Gmail address to receive your official 6-digit OTP directly in your Gmail inbox within 10 seconds!
                 </div>
 
                 <button id="btn-submit-email" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
-                  ${this.isLoading ? '⏳ Sending Fast OTP...' : 'Get Fast OTP / ओटीपी प्राप्त करें →'}
+                  ${this.isLoading ? '⏳ Sending OTP to Gmail...' : 'Send OTP to Gmail / ओटीपी भेजें →'}
                 </button>
 
                 <div class="auth-footer-link">

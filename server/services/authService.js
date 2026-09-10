@@ -74,17 +74,7 @@ export async function requestEmailOtp(emailOrPhone) {
     emailOtpStore.set(user.phone, { otp, expiresAt, userId: user.id });
   }
 
-  // Also dispatch SMS to simulated virtual phone and mobile gateway
-  if (user.phone) {
-    sendSms({
-      phone: user.phone,
-      recipientName: user.name,
-      type: 'OTP',
-      data: { otp, name: user.name }
-    }).catch(e => console.warn('[SMS BACKGROUND DISPATCH]', e.message));
-  }
-
-  // Dispatch Email Notification (Real Gmail or Virtual Simulator)
+  // Dispatch Email Notification (Real Gmail)
   const emailResult = await sendEmail({
     to: cleanEmail,
     recipientName: user.name,

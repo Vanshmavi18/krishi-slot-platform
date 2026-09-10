@@ -30,8 +30,8 @@ export function getEmailGatewayConfig() {
       user: gmailUser,
       pass: gmailPass,
       host: 'smtp.gmail.com',
-      port: 587,
-      secure: false
+      port: 465,
+      secure: true
     };
   }
 
@@ -41,8 +41,8 @@ export function getEmailGatewayConfig() {
       user: smtpUser,
       pass: smtpPass,
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true'
+      port: Number(process.env.SMTP_PORT) || 465,
+      secure: process.env.SMTP_SECURE !== 'false'
     };
   }
 
@@ -74,18 +74,19 @@ function getTransporter() {
   try {
     if (config.type === 'GMAIL') {
       transporterInstance = nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         pool: true,
         maxConnections: 5,
         maxMessages: 100,
-        rateLimit: 10,
         auth: {
           user: config.user,
           pass: config.pass
         },
-        connectionTimeout: 6000,
-        greetingTimeout: 5000,
-        socketTimeout: 10000
+        connectionTimeout: 10000,
+        greetingTimeout: 8000,
+        socketTimeout: 15000
       });
     } else {
       transporterInstance = nodemailer.createTransport({
@@ -99,9 +100,9 @@ function getTransporter() {
           user: config.user,
           pass: config.pass
         },
-        connectionTimeout: 6000,
-        greetingTimeout: 5000,
-        socketTimeout: 10000,
+        connectionTimeout: 10000,
+        greetingTimeout: 8000,
+        socketTimeout: 15000,
         tls: {
           rejectUnauthorized: false
         }
@@ -109,7 +110,7 @@ function getTransporter() {
     }
 
     lastConfigHash = configHash;
-    console.log(`[EMAIL GATEWAY] Connected to pooled ${config.type} transport (${config.user})`);
+    console.log(`[EMAIL GATEWAY] Connected to SSL ${config.host}:${config.port} (${config.user})`);
     return transporterInstance;
   } catch (err) {
     console.error('[EMAIL GATEWAY ERROR] Failed to initialize transporter:', err.message);
@@ -119,8 +120,8 @@ function getTransporter() {
 
 export const EMAIL_TEMPLATES = {
   OTP: ({ name, otp, expiresInMins = 10 }) => ({
-    subject: `Your KrishiSlot Verification Code: ${otp}`,
-    text: `Namaste ${name || 'Farmer Friend'},\n\nYour KrishiSlot login verification OTP is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nKrishiSlot Smart Mandi & APMC Procurement Platform`,
+    subject: `Your KrishiSlot OTP is ${otp}`,
+    text: `Namaste ${name || 'Farmer Friend'},\n\nYour KrishiSlot login verification code is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nKrishiSlot Smart APMC Portal`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -356,49 +357,31 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
   const config = getEmailGatewayConfig();
 
   if (transporter && config) {
-    const fromAddress = `"KrishiSlot Verification" <${config.user}>`;
+    const fromAddress = `"KrishiSlot" <${config.user}>`;
     const mailOptions = {
       from: fromAddress,
       to: cleanEmail,
       replyTo: config.user,
       subject: templateContent.subject,
       text: templateContent.text,
-      html: templateContent.html,
-      priority: 'high',
-      headers: {
-        'X-Priority': '1 (Highest)',
-        'X-MSMail-Priority': 'High',
-        'Importance': 'High'
-      }
+      html: templateContent.html
     };
 
     try {
-      // 3.5s timeout race so user API is never blocked if external network is sluggish
-      const sendPromise = transporter.sendMail(mailOptions);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Email dispatch continuing in background')), 3500)
-      );
-
-      const info = await Promise.race([sendPromise, timeoutPromise]);
+      console.log(`[EMAIL GATEWAY] Sending live email via SSL 465 to ${cleanEmail}...`);
+      const info = await transporter.sendMail(mailOptions);
 
       emailRecord.status = 'SENT';
-      emailRecord.provider = config.type === 'GMAIL' ? 'GMAIL_REAL' : 'SMTP_RELAY';
+      emailRecord.provider = 'GMAIL_REAL';
       emailRecord.messageId = info.messageId;
       emailRecord.isReal = true;
 
-      console.log(`\n[REAL GMAIL DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (MessageId: ${info.messageId})`);
+      console.log(`\n[REAL GMAIL DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (MessageId: ${info.messageId}) (Server: ${info.response})\n`);
     } catch (err) {
-      if (err.message.includes('continuing in background')) {
-        console.log(`[EMAIL GATEWAY] Email dispatch continuing in background for ${cleanEmail}`);
-        emailRecord.status = 'SENT';
-        emailRecord.provider = config.type === 'GMAIL' ? 'GMAIL_REAL' : 'SMTP_RELAY';
-        emailRecord.isReal = true;
-      } else {
-        console.error(`\n[GMAIL SMTP ERROR] Failed to send email to ${cleanEmail}:`, err.message);
-        emailRecord.status = 'FAILED';
-        emailRecord.providerError = err.message;
-        emailRecord.isReal = false;
-      }
+      console.error(`\n[GMAIL SMTP ERROR] Failed to send email to ${cleanEmail}:`, err.message);
+      emailRecord.status = 'FAILED';
+      emailRecord.providerError = err.message;
+      emailRecord.isReal = false;
     }
   } else {
     console.log(`\n[VIRTUAL EMAIL DISPATCH] -> To: ${cleanEmail}`);
