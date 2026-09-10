@@ -434,7 +434,7 @@ export class AuthModal {
                     <div style="font-size:12px;color:#374151;line-height:1.45">
                       ${this.isPhoneAuth
                         ? 'Please check your mobile SMS inbox for the 6-digit verification code and enter it below.'
-                        : 'Please check your <b>Gmail inbox</b> (and Spam/Updates folder) for the 6-digit code from <b>KrishiSlot</b> and enter it below.'}
+                        : `Please check your <b>Gmail inbox</b> (or <b>Spam/Junk</b> folder) for the code from <code>${this.emailConfig?.senderEmail || 'vanshmavi018@gmail.com'}</code>.`}
                     </div>
                   </div>
                 </div>

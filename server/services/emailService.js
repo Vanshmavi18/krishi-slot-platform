@@ -119,10 +119,12 @@ function getTransporter() {
 }
 
 export const EMAIL_TEMPLATES = {
-  OTP: ({ name, otp, expiresInMins = 10 }) => ({
-    subject: `Your KrishiSlot OTP is ${otp}`,
-    text: `Namaste ${name || 'Farmer Friend'},\n\nYour KrishiSlot login verification code is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nKrishiSlot Smart APMC Portal`,
-    html: `
+  OTP: ({ name, otp, expiresInMins = 10 }) => {
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    return {
+      subject: `${otp} is your KrishiSlot verification code [${timeStr}]`,
+      text: `Namaste ${name || 'Farmer Friend'},\n\nYour KrishiSlot login verification code is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nKrishiSlot Smart APMC Portal`,
+      html: `
       <!DOCTYPE html>
       <html>
       <head>
@@ -169,7 +171,8 @@ export const EMAIL_TEMPLATES = {
       </body>
       </html>
     `
-  }),
+  };
+},
 
   SLOT_CONFIRMED: ({ name, token, crop, centre, date, time, vehicle, quantity, bookingId }) => ({
     subject: `🌾 Slot Confirmed: Gate Token #${token} — KrishiSlot APMC`,
@@ -364,7 +367,13 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
       replyTo: config.user,
       subject: templateContent.subject,
       text: templateContent.text,
-      html: templateContent.html
+      html: templateContent.html,
+      priority: 'high',
+      headers: {
+        'X-Priority': '1',
+        'Importance': 'high',
+        'X-MSMail-Priority': 'High'
+      }
     };
 
     try {
