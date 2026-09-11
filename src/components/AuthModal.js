@@ -58,6 +58,7 @@ export class AuthModal {
   open(defaultTab = 'farmer', mode = 'login') {
     this.modalMode = mode;
     this.activeTab = defaultTab;
+    this.signupRole = defaultTab;
     this.error = null;
     this.successMessage = null;
     this.isLoading = false;
@@ -320,7 +321,7 @@ export class AuthModal {
     this.render();
 
     try {
-      const res = await this.api.login(identifier, password);
+      const res = await this.api.login(identifier, password, this.activeTab);
       this.isLoading = false;
       this.close();
       if (this.onLoginSuccess) {
@@ -480,9 +481,20 @@ export class AuthModal {
     let headerTitle = 'AgriQueue Official Gateway';
     let headerSubtitle = 'Sign in to access APMC slot booking & mandi operations.';
 
-    if (isSignup) {
+    if (isLogin) {
+      if (this.activeTab === 'buyer') {
+        headerTitle = '🏢 Commercial Buyer Portal';
+        headerSubtitle = 'Sign in to access Mandi arrival lots, live biddings & gate passes.';
+      } else if (this.activeTab === 'admin') {
+        headerTitle = '🛡️ APMC Mandi Admin Portal';
+        headerSubtitle = 'Sign in for Mandi token management, weighbridge & DBT operations.';
+      } else {
+        headerTitle = '👨‍🌾 Farmer (Seller) Portal';
+        headerSubtitle = 'Sign in to book APMC procurement slots, track tokens & live payments.';
+      }
+    } else if (isSignup) {
       headerTitle = 'Create Your AgriQueue Account';
-      headerSubtitle = 'Step-by-step verified registration for farmers & buyers.';
+      headerSubtitle = 'Step-by-step verified registration for farmers, buyers & mandi staff.';
     } else if (isForgot) {
       headerTitle = 'Reset Forgotten Password';
       headerSubtitle = 'Secure OTP-verified password recovery.';
@@ -854,19 +866,67 @@ export class AuthModal {
   // 2. LOGIN VIEW (Single Field: Username OR Gmail + Password)
   // ============================================================================
   renderLoginView() {
+    const isFarmer = this.activeTab === 'farmer' || !this.activeTab;
+    const isBuyer = this.activeTab === 'buyer';
+    const isAdmin = this.activeTab === 'admin';
+
+    let identLabel = 'Username or Gmail';
+    let identPlaceholder = 'e.g. vansh123 or example@gmail.com';
+    let buttonText = 'Login as Farmer →';
+
+    if (isBuyer) {
+      identLabel = 'Buyer ID, Username or Gmail';
+      identPlaceholder = 'e.g. BUYER-01, vansh or buyer@gmail.com';
+      buttonText = 'Login to Buyer Portal →';
+    } else if (isAdmin) {
+      identLabel = 'Staff ID, Username or Gmail';
+      identPlaceholder = 'e.g. APMC-ADMIN, vansh or staff@gmail.com';
+      buttonText = 'Login to Mandi Admin Portal →';
+    }
+
     return `
       <div>
         <form id="auth-unified-login-form" onsubmit="return false;">
+          <!-- Role Selection Tabs for Login -->
+          <div style="margin-bottom:18px">
+            <label style="font-size:12px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px;display:block">
+              Select Portal / Role to Access:
+            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <button 
+                type="button"
+                id="login-role-farmer" 
+                style="padding:10px 6px;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isFarmer ? '#ecfdf5' : '#ffffff'};color:${isFarmer ? '#065f46' : '#334155'};border:2px solid ${isFarmer ? '#059669' : '#cbd5e1'};box-shadow:${isFarmer ? '0 4px 12px rgba(5,150,105,0.2)' : 'none'}"
+              >
+                👨‍🌾 Farmer (किसान)
+              </button>
+              <button 
+                type="button"
+                id="login-role-buyer" 
+                style="padding:10px 6px;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isBuyer ? '#eff6ff' : '#ffffff'};color:${isBuyer ? '#1e40af' : '#334155'};border:2px solid ${isBuyer ? '#2563eb' : '#cbd5e1'};box-shadow:${isBuyer ? '0 4px 12px rgba(37,99,235,0.2)' : 'none'}"
+              >
+                🏢 Buyer (व्यापारी)
+              </button>
+              <button 
+                type="button"
+                id="login-role-admin" 
+                style="padding:10px 6px;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isAdmin ? '#f1f5f9' : '#ffffff'};color:${isAdmin ? '#0f172a' : '#334155'};border:2px solid ${isAdmin ? '#475569' : '#cbd5e1'};box-shadow:${isAdmin ? '0 4px 12px rgba(71,85,105,0.2)' : 'none'}"
+              >
+                🏛️ Mandi Admin
+              </button>
+            </div>
+          </div>
+
           <!-- Unified Username OR Gmail Field -->
           <div style="margin-bottom:16px">
             <label for="login-ident-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
-              Username or Gmail <span style="color:#dc2626">*</span>
+              ${identLabel} <span style="color:#dc2626">*</span>
             </label>
             <input 
               id="login-ident-input" 
               type="text" 
               value="${this.loginIdentifier || ''}" 
-              placeholder="e.g. vansh123 or example@gmail.com" 
+              placeholder="${identPlaceholder}" 
               required 
               style="width:100%;padding:14px 16px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
             />
@@ -908,10 +968,10 @@ export class AuthModal {
           <button 
             type="button" 
             id="btn-submit-login" 
-            style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45);transition:transform 0.15s ease"
+            style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, ${isBuyer ? '#2563eb, #1d4ed8' : isAdmin ? '#334155, #1e293b' : '#16a34a, #15803d'});color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 20px -2px rgba(0,0,0,0.25);transition:transform 0.15s ease"
             ${this.isLoading ? 'disabled' : ''}
           >
-            ${this.isLoading ? '<span class="pulse-dot"></span> Authenticating...' : 'Login →'}
+            ${this.isLoading ? '<span class="pulse-dot"></span> Authenticating...' : buttonText}
           </button>
 
           <!-- Don't have an account? Sign Up Link -->
@@ -922,7 +982,6 @@ export class AuthModal {
             </button>
           </div>
         </form>
-
       </div>
     `;
   }
@@ -1190,6 +1249,23 @@ export class AuthModal {
     document.getElementById('btn-signup-step3-submit')?.addEventListener('click', () => this.handleCompleteSignup());
     document.getElementById('btn-goto-login-now')?.addEventListener('click', () => {
       this.modalMode = 'login';
+      this.render();
+    });
+
+    // --- Login Role Portal Tabs ---
+    document.getElementById('login-role-farmer')?.addEventListener('click', () => {
+      this.activeTab = 'farmer';
+      this.signupRole = 'farmer';
+      this.render();
+    });
+    document.getElementById('login-role-buyer')?.addEventListener('click', () => {
+      this.activeTab = 'buyer';
+      this.signupRole = 'buyer';
+      this.render();
+    });
+    document.getElementById('login-role-admin')?.addEventListener('click', () => {
+      this.activeTab = 'admin';
+      this.signupRole = 'admin';
       this.render();
     });
 

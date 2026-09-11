@@ -263,9 +263,11 @@ class AgriQueueApp {
 
   async switchRole(role, id = null) {
     try {
-      const res = await api.quickSwitch(role, id);
+      const targetId = id || this.user?.id;
+      const res = await api.quickSwitch(role, targetId);
       this.user = res.user;
-      const lower = role.toLowerCase();
+      api.setSession(res.token, res.user);
+      const lower = (res.user?.role || role).toLowerCase();
       if (lower === 'buyer') {
         this.currentView = 'buyer';
       } else if (lower === 'admin' || lower === 'officer') {
@@ -495,6 +497,7 @@ class AgriQueueApp {
     document.getElementById('btn-toggle-lang')?.addEventListener('click', () => this.toggleLanguage());
     document.getElementById('btn-topbar-notif')?.addEventListener('click', () => this.notificationCenter.toggle());
     document.getElementById('sidebar-notif-btn')?.addEventListener('click', () => this.notificationCenter.toggle(true));
+    document.getElementById('topbar-role-switch')?.addEventListener('change', (e) => this.switchRole(e.target.value));
 
     // Mobile Drawer Navigation Toggles
     const closeMobileDrawer = () => {

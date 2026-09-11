@@ -1,5 +1,6 @@
 // server/routes/authRoutes.js
 import { Router } from 'express';
+import jwt from 'jsonwebtoken';
 import {
   sendSignupOtp,
   verifySignupOtp,
@@ -95,17 +96,17 @@ router.post('/register', async (req, res) => {
 // 2. LOGIN & SESSION ENDPOINTS
 // ============================================================================
 
-// Unified Login accepting Username OR Gmail + Password
+// Unified Login accepting Username OR Gmail + Password (with optional portal role)
 const loginHandler = async (req, res) => {
   try {
     const identifier = req.body.identifier || req.body.username || req.body.email || req.body.phone;
-    const { password } = req.body;
+    const { password, role } = req.body;
 
     if (!identifier || !password) {
       return res.status(400).json({ success: false, error: 'Invalid username/email or password' });
     }
 
-    const result = await loginUser(identifier, password);
+    const result = await loginUser(identifier, password, role);
     res.json(result);
   } catch (err) {
     // 401 Unauthorized with generic message
@@ -225,10 +226,17 @@ router.post('/login-buyer', async (req, res) => {
 });
 
 // 1-Click Role Switch for Demonstration
-router.post('/quick-switch', (req, res) => {
+router.post('/quick-switch', async (req, res) => {
   try {
-    const { role, id } = req.body;
-    const result = quickSwitch(role, id);
+    let { role, id } = req.body;
+    if (!id && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'agriqueue_local_dev_secret_key_2026');
+        id = decoded.id;
+      } catch (_) {}
+    }
+    const result = await quickSwitch(role, id);
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });

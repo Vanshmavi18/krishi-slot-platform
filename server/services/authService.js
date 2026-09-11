@@ -436,7 +436,7 @@ export async function registerUser(data) {
 // 2. LOGIN FLOW (Username OR Gmail + Password)
 // ============================================================================
 
-export async function loginUser(identifier, password) {
+export async function loginUser(identifier, password, requestedRole = null) {
   const rawId = String(identifier || '').trim();
   const rawPass = String(password || '');
 
@@ -455,6 +455,25 @@ export async function loginUser(identifier, password) {
   const isMatch = await verifyPassword(rawPass, user.passwordHash, user.role);
   if (!isMatch) {
     throw new Error('Invalid username/email or password');
+  }
+
+  // If a specific role was requested (e.g. buyer, admin, farmer)
+  const validRoles = ['farmer', 'buyer', 'admin', 'officer'];
+  const targetRole = requestedRole && validRoles.includes(String(requestedRole).toLowerCase())
+    ? String(requestedRole).toLowerCase()
+    : user.role;
+
+  if (targetRole && targetRole !== user.role) {
+    const updates = { role: targetRole };
+    if (targetRole === 'buyer' && !user.buyerId) {
+      updates.buyerId = `BUYER-${Math.floor(100 + Math.random() * 900)}`;
+      if (!user.company) updates.company = `${user.name || user.username} Agro Foods`;
+    }
+    if ((targetRole === 'admin' || targetRole === 'officer') && !user.staffId) {
+      updates.staffId = `APMC-ADMIN-${Math.floor(10 + Math.random() * 90)}`;
+    }
+    await db.updateUser(user.id, updates);
+    Object.assign(user, updates);
   }
 
   // Create JWT authenticated session
@@ -754,22 +773,78 @@ export async function loginBuyer(identifier, password) {
   return { success: true, token, user: safeUser };
 }
 
-export function quickSwitch(role, id = null) {
-  let user;
-  const lowerRole = String(role).toLowerCase();
+export async function quickSwitch(role, id = null) {
+  let user = null;
+  const lowerRole = String(role || 'farmer').toLowerCase();
 
-  if (lowerRole === 'farmer') {
-    user = db.find('users', u => u.role === 'farmer' && (id ? u.id === id : (u.phone === '9876543210' || u.email === 'ramesh.farmer@agriqueue.in')));
-    if (!user) user = db.find('users', u => u.role === 'farmer');
-  } else if (lowerRole === 'officer' || lowerRole === 'admin') {
-    user = db.find('users', u => u.role === 'admin') || db.find('users', u => u.role === 'officer');
-  } else if (lowerRole === 'buyer') {
-    user = db.find('users', u => u.role === 'buyer' && (id ? u.id === id : u.buyerId === 'BUYER-01'));
-    if (!user) user = db.find('users', u => u.role === 'buyer');
+  // 1. If active user id is provided, switch THAT user's active role
+  if (id) {
+    user = await db.findUserByIdentifier(id);
+    if (user) {
+      const updates = { role: lowerRole };
+      if (lowerRole === 'buyer' && !user.buyerId) {
+        updates.buyerId = `BUYER-${Math.floor(100 + Math.random() * 900)}`;
+        if (!user.company) updates.company = `${user.name || user.username} Agro Foods`;
+      } else if ((lowerRole === 'admin' || lowerRole === 'officer') && !user.staffId) {
+        updates.staffId = `APMC-ADMIN-${Math.floor(10 + Math.random() * 90)}`;
+      }
+      await db.updateUser(user.id, updates);
+      Object.assign(user, updates);
+    }
   }
 
+  // 2. Fallback to finding an existing user with this role
   if (!user) {
-    throw new Error(`Profile not found for role ${role}`);
+    if (lowerRole === 'farmer') {
+      user = await db.findUserByIdentifier('ramesh.farmer@agriqueue.in') || (db.get('users') || []).find(u => u.role === 'farmer');
+    } else if (lowerRole === 'officer' || lowerRole === 'admin') {
+      user = (db.get('users') || []).find(u => u.role === 'admin' || u.role === 'officer');
+    } else if (lowerRole === 'buyer') {
+      user = (db.get('users') || []).find(u => u.role === 'buyer');
+    }
+  }
+
+  // 3. If still no user exists for this role, auto-create a persistent profile
+  if (!user) {
+    if (lowerRole === 'buyer') {
+      const newBuyer = {
+        id: 'BUYER-01',
+        buyerId: 'BUYER-01',
+        username: 'commercial_buyer',
+        name: 'Vikram Singhania',
+        role: 'buyer',
+        email: 'buyer@agriqueue.in',
+        phone: '9822334455',
+        company: 'AgroCorp Foods Pvt Ltd',
+        mandiLicense: 'APMC-DL-8821',
+        gstNumber: '09AAACA1234Q1Z5',
+        village: 'Gorakhpur Mandi Yard'
+      };
+      user = await db.createUser(newBuyer);
+    } else if (lowerRole === 'admin' || lowerRole === 'officer') {
+      const newAdmin = {
+        id: 'APMC-ADMIN-01',
+        staffId: 'APMC-ADMIN-01',
+        username: 'mandi_admin',
+        name: 'Dr. Alok Verma',
+        role: 'admin',
+        email: 'admin@agriqueue.in',
+        phone: '9811223344',
+        village: 'Gorakhpur APMC Headquarters'
+      };
+      user = await db.createUser(newAdmin);
+    } else {
+      const newFarmer = {
+        id: 'FRM-UP-001',
+        username: 'ramesh_farmer',
+        name: 'Ramesh Kumar',
+        role: 'farmer',
+        email: 'ramesh.farmer@agriqueue.in',
+        phone: '9876543210',
+        village: 'Gorakhpur, Uttar Pradesh'
+      };
+      user = await db.createUser(newFarmer);
+    }
   }
 
   const token = jwt.sign(

@@ -143,10 +143,10 @@ class ApiService {
   }
 
   // --- LOGIN FLOW ---
-  async login(identifier, password) {
+  async login(identifier, password, role = null) {
     const data = await this.fetch('/api/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ identifier, password })
+      body: JSON.stringify({ identifier, password, role })
     });
     this.setSession(data.token, data.user);
     return data;

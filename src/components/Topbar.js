@@ -41,10 +41,19 @@ export function renderTopbar({ user, language, t, unreadNotifCount = 0 }) {
           🌐 <span class="lang-text">${language === 'en' ? 'हिन्दी' : 'English'}</span>
         </button>
 
-        <!-- Active Role Badge -->
-        <div class="user-role-badge" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:700;color:#334155">
-          <span>${avatarIcon}</span>
-          <span>${roleLabel}</span>
+        <!-- Active Portal / Role Switcher -->
+        <div class="topbar-role-container" style="display:flex;align-items:center">
+          <select 
+            id="topbar-role-switch" 
+            class="role-select-dropdown" 
+            aria-label="Switch Active Portal" 
+            title="Switch between Farmer, Buyer and Admin Portals"
+            style="padding:6px 12px;border-radius:20px;background:#ffffff;border:1.5px solid #059669;color:#064e3b;font-size:12px;font-weight:800;cursor:pointer;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.06)"
+          >
+            <option value="farmer" ${currentRole === 'farmer' ? 'selected' : ''}>👨‍🌾 Farmer Portal</option>
+            <option value="buyer" ${currentRole === 'buyer' ? 'selected' : ''}>🏢 Buyer Portal</option>
+            <option value="admin" ${currentRole === 'admin' || currentRole === 'officer' ? 'selected' : ''}>🏛️ Mandi Admin</option>
+          </select>
         </div>
 
         <!-- Notification Bell -->
