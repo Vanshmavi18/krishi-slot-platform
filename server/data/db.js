@@ -89,36 +89,55 @@ class Database {
     dotenv.config();
     const uri = (process.env.MONGODB_URI || '').trim();
 
-    if (!uri || uri === 'mongodb://localhost:27017/agriqueue' && !process.env.ENABLE_LOCAL_MONGO) {
-      // Check if user set an explicit Atlas or real MongoDB URI
-      if (!uri) {
-        console.log('ℹ️  [DATABASE] MONGODB_URI not set in .env. Using high-performance disk-backed store.json.');
-        return false;
-      }
+    if (!uri) {
+      console.log('ℹ️  [DATABASE] MONGODB_URI environment variable is not configured in .env or Render.');
+      console.log('ℹ️  [DATABASE] Operating in persistent local storage mode (store.json).');
+      console.log('ℹ️  [DATABASE] To connect to MongoDB Atlas in production, set MONGODB_URI in Render dashboard.');
+      this.isMongoConnected = false;
+      return false;
     }
 
     try {
-      console.log(`[DATABASE] Connecting to MongoDB: ${this.maskUri(uri)}...`);
+      console.log(`[DATABASE] Connecting to MongoDB Atlas: ${this.maskUri(uri)}...`);
+      
+      // Attach persistent connection listeners once
+      if (!this.hasAttachedListeners) {
+        mongoose.connection.on('connected', () => {
+          this.isMongoConnected = true;
+          console.log('✅ [DATABASE] MongoDB connected successfully.');
+        });
+        mongoose.connection.on('error', (err) => {
+          this.isMongoConnected = false;
+          console.error('❌ [DATABASE] MongoDB connection error:', err.message);
+        });
+        mongoose.connection.on('disconnected', () => {
+          this.isMongoConnected = false;
+          console.warn('⚠️  [DATABASE] MongoDB disconnected. Falling back to persistent disk store.');
+        });
+        this.hasAttachedListeners = true;
+      }
+
       await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 5000,
+        serverSelectionTimeoutMS: 6000,
         connectTimeoutMS: 10000
       });
 
       this.isMongoConnected = true;
       this.mongoUri = uri;
-      console.log('✅ [DATABASE] Successfully connected to MongoDB.');
+      console.log('✅ [DATABASE] MongoDB connected successfully.');
 
-      // Sync seed data into MongoDB if collections are empty
-      await this.syncToMongo();
+      // Synchronize data between MongoDB and local store
+      await this.syncWithMongo();
       return true;
     } catch (err) {
       this.isMongoConnected = false;
-      console.warn(`⚠️  [DATABASE] MongoDB connection attempt failed (${err.message}). Seamlessly running on persistent disk store.`);
+      console.error(`❌ [DATABASE] MongoDB connection failed: ${err.message}`);
+      console.log('ℹ️  [DATABASE] Seamlessly falling back to high-performance persistent store (store.json).');
       return false;
     }
   }
 
-  async syncToMongo() {
+  async syncWithMongo() {
     if (!this.isMongoConnected) return;
     try {
       for (const [colName, Model] of Object.entries(MODEL_MAP)) {
@@ -126,10 +145,17 @@ class Database {
         if (count === 0 && Array.isArray(this.data[colName]) && this.data[colName].length > 0) {
           console.log(`[DATABASE] Seeding ${this.data[colName].length} items into MongoDB '${colName}' collection...`);
           await Model.insertMany(this.data[colName], { ordered: false }).catch(() => {});
+        } else if (count > 0) {
+          // If MongoDB has documents, load them into local cache as source of truth
+          const docs = await Model.find({}).lean().exec();
+          if (docs && docs.length > 0) {
+            this.data[colName] = docs;
+          }
         }
       }
+      this.saveLocal();
     } catch (err) {
-      console.warn('[DATABASE] Seed sync error:', err.message);
+      console.warn('[DATABASE] Sync warning:', err.message);
     }
   }
 
@@ -148,7 +174,7 @@ class Database {
 
     return {
       success: true,
-      provider: this.isMongoConnected ? 'MongoDB' : 'Persistent File DB (store.json)',
+      provider: this.isMongoConnected ? 'MongoDB Atlas (Source of Truth)' : 'Persistent File DB (store.json)',
       connected: true,
       mongoConnected: this.isMongoConnected,
       mongoUri: this.isMongoConnected ? this.maskUri(this.mongoUri) : null,
@@ -158,7 +184,128 @@ class Database {
     };
   }
 
-  // Synchronous Read Operations
+  // --- ASYNC BOOKING OPERATIONS (MONGODB AS PRIMARY SOURCE OF TRUTH) ---
+  
+  async createBooking(bookingData) {
+    console.log(`[BOOKING] Booking creation started for farmer: ${bookingData.farmerId}`);
+    
+    // Always insert into local memory and disk store for resilience
+    if (!Array.isArray(this.data.bookings)) {
+      this.data.bookings = [];
+    }
+    this.data.bookings.unshift(bookingData);
+    this.saveLocal();
+
+    let result = bookingData;
+
+    // Save directly to MongoDB Atlas if connected
+    if (this.isMongoConnected) {
+      try {
+        const created = await Booking.create(bookingData);
+        result = created.toObject();
+        console.log(`[BOOKING] Booking created successfully in MongoDB: #${result.bookingId}`);
+      } catch (mongoErr) {
+        console.error(`❌ [BOOKING] MongoDB write failed (${mongoErr.message}). Persisted to local disk.`);
+      }
+    } else {
+      console.log(`[BOOKING] Booking created successfully in persistent store: #${bookingData.bookingId}`);
+    }
+
+    return result;
+  }
+
+  async getBookings(filterFn = () => true, mongoFilter = {}) {
+    if (this.isMongoConnected) {
+      try {
+        const bookings = await Booking.find(mongoFilter).sort({ createdAt: -1 }).lean().exec();
+        return bookings;
+      } catch (err) {
+        console.warn(`[BOOKING] MongoDB fetch failed (${err.message}). Falling back to local store.`);
+      }
+    }
+
+    const list = this.get('bookings');
+    const filtered = Array.isArray(list) ? list.filter(filterFn) : [];
+    return filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }
+
+  async findBookingById(id) {
+    if (this.isMongoConnected) {
+      try {
+        const orConditions = [{ bookingId: id }, { id: id }];
+        if (mongoose.isValidObjectId(id)) {
+          orConditions.push({ _id: id });
+        }
+        const doc = await Booking.findOne({ $or: orConditions }).lean().exec();
+        if (doc) return doc;
+      } catch (err) {
+        console.warn(`[BOOKING] MongoDB lookup failed (${err.message}). Falling back to local store.`);
+      }
+    }
+
+    return this.find('bookings', b => b.bookingId === id || b.id === id || String(b._id) === id);
+  }
+
+  async findOneBooking(mongoFilter = {}, filterFn = () => true) {
+    if (this.isMongoConnected) {
+      try {
+        const doc = await Booking.findOne(mongoFilter).lean().exec();
+        if (doc) return doc;
+      } catch (err) {
+        console.warn(`[BOOKING] MongoDB findOne failed (${err.message}). Falling back to local store.`);
+      }
+    }
+    const list = this.get('bookings');
+    return Array.isArray(list) ? list.find(filterFn) : null;
+  }
+
+  async countBookings(mongoFilter = {}, filterFn = () => true) {
+    if (this.isMongoConnected) {
+      try {
+        return await Booking.countDocuments(mongoFilter);
+      } catch (err) {
+        console.warn(`[BOOKING] MongoDB count failed (${err.message}). Falling back to local store.`);
+      }
+    }
+    const list = this.get('bookings');
+    return Array.isArray(list) ? list.filter(filterFn).length : 0;
+  }
+
+  async updateBooking(id, updateDoc) {
+    let updatedItem = null;
+
+    // Update in local store
+    if (Array.isArray(this.data.bookings)) {
+      const idx = this.data.bookings.findIndex(b => b.bookingId === id || b.id === id || String(b._id) === id);
+      if (idx !== -1) {
+        this.data.bookings[idx] = { ...this.data.bookings[idx], ...updateDoc, updatedAt: new Date().toISOString() };
+        updatedItem = this.data.bookings[idx];
+        this.saveLocal();
+      }
+    }
+
+    // Update in MongoDB Atlas
+    if (this.isMongoConnected) {
+      try {
+        const orConditions = [{ bookingId: id }, { id: id }];
+        if (mongoose.isValidObjectId(id)) {
+          orConditions.push({ _id: id });
+        }
+        const doc = await Booking.findOneAndUpdate(
+          { $or: orConditions },
+          { $set: { ...updateDoc, updatedAt: new Date() } },
+          { new: true }
+        ).lean().exec();
+        if (doc) updatedItem = doc;
+      } catch (mongoErr) {
+        console.warn(`[BOOKING] MongoDB update failed (${mongoErr.message}).`);
+      }
+    }
+
+    return updatedItem;
+  }
+
+  // Synchronous Read Operations (Backward compatibility)
   get(collection) {
     return this.data[collection] || [];
   }

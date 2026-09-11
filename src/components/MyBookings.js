@@ -1,6 +1,6 @@
 // src/components/MyBookings.js
 
-export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
+export function renderMyBookings({ user, bookings = [], error = null, t, onNavigate }) {
   const farmerName = user?.name || 'Farmer';
   const farmerId = user?.id || '';
 
@@ -13,10 +13,10 @@ export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Pending':
-        return '<span class="status-pill waiting" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a">⏳ Pending APMC Review</span>';
+        return '<span class="status-pill waiting" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a">⏳ Pending</span>';
       case 'Approved':
       case 'CONFIRMED':
-        return '<span class="status-pill confirmed" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe">✓ Approved & Available</span>';
+        return '<span class="status-pill confirmed" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe">✓ Approved</span>';
       case 'Rejected':
         return '<span class="status-pill" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca">✕ Rejected</span>';
       case 'Completed':
@@ -52,6 +52,16 @@ export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
           </button>
         </div>
       </div>
+
+      ${error ? `
+        <div style="background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:14px 18px;border-radius:12px;font-size:14px;margin-bottom:20px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">⚠️</span>
+          <div>
+            <b>Database Connection Warning:</b> ${error}
+            <div style="font-size:12px;color:#b91c1c;margin-top:2px">Please click "Refresh" or verify backend MongoDB status.</div>
+          </div>
+        </div>
+      ` : ''}
 
       <!-- Bookings Metric Overview Cards -->
       <div class="stats-grid" style="grid-template-columns:repeat(5, 1fr);margin-bottom:28px">
@@ -90,7 +100,7 @@ export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
               📋 My Scheduled Delivery Slots
             </h2>
             <p style="font-size:13px;color:#6b7280">
-              Live status directly synchronized with APMC Mandi database
+              Live status directly synchronized with APMC Mandi MongoDB database
             </p>
           </div>
           <div style="display:flex;gap:8px">
@@ -107,7 +117,7 @@ export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
         ${bookings.length === 0 ? `
           <div style="padding:48px 20px;text-align:center">
             <div style="font-size:48px;margin-bottom:12px">🌾</div>
-            <h3 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:6px">No Bookings Found</h3>
+            <h3 style="font-size:18px;font-weight:700;color:#1e293b;margin-bottom:6px">No bookings found.</h3>
             <p style="font-size:14px;color:#64748b;max-width:420px;margin:0 auto 20px">
               You have not booked any crop delivery slots yet. Schedule your delivery window to avoid mandi congestion.
             </p>
@@ -121,11 +131,12 @@ export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
               <thead>
                 <tr>
                   <th>Booking ID</th>
-                  <th>Crop / Product</th>
+                  <th>Crop</th>
                   <th>Quantity</th>
-                  <th>Expected Price</th>
-                  <th>Delivery Date & Slot</th>
-                  <th>Mandi / Location</th>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Mandi/Market</th>
+                  <th>Buyer</th>
                   <th>Status</th>
                   <th>Created Date</th>
                   <th>Actions</th>
@@ -134,44 +145,41 @@ export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
               <tbody id="my-bookings-table-body">
                 ${bookings.map(b => {
                   const bId = b.bookingId || b.id;
-                  const dateDisplay = b.displayDate || (b.preferredDate ? new Date(b.preferredDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : b.date || 'TBD');
+                  const dateDisplay = b.displayDate || (b.preferredDate ? new Date(b.preferredDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : b.date || b.slotDate || 'TBD');
+                  const timeDisplay = b.timeSlot || `${b.startTime || ''} – ${b.endTime || ''}`.trim() || 'Scheduled';
+                  const mandiDisplay = b.location || b.market || b.mandi || b.centreName || 'APMC Mandi';
                   const isCancelable = b.status === 'Pending' || b.status === 'Approved' || b.status === 'CONFIRMED';
-                  const hasBuyerRequest = Array.isArray(b.buyerRequests) && b.buyerRequests.length > 0;
+                  const hasBuyerRequests = Array.isArray(b.buyerRequests) && b.buyerRequests.length > 0;
+                  const buyerDisplay = b.buyerName ? `<b>${b.buyerName}</b>` : (hasBuyerRequests ? `<span class="status-pill" style="background:#eff6ff;color:#2563eb;font-size:11px;padding:2px 6px">🛒 ${b.buyerRequests.length} Offer(s)</span>` : '<span style="color:#94a3b8;font-size:12px">Open for offers</span>');
                   const createdDate = b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent';
 
                   return `
                     <tr data-status="${b.status}">
                       <td>
                         <strong style="color:#15803d;font-size:13.5px">#${bId}</strong>
-                        ${b.token ? `<div style="font-size:11px;color:#6b7280">Gate Token: <b>#${b.token}</b></div>` : ''}
+                        ${b.token ? `<div style="font-size:11px;color:#6b7280">Token: <b>#${b.token}</b></div>` : ''}
                       </td>
                       <td>
-                        <b>${b.cropName}</b>
+                        <b>${b.crop || b.cropName}</b>
                       </td>
                       <td>
                         <strong style="color:#0f766e;font-size:14px">${b.quantity}</strong>
                         <span style="font-size:12px;color:#6b7280">${b.quantityUnit || 'quintal'}</span>
                       </td>
                       <td>
-                        <div style="font-weight:700;color:#15803d">₹${Number(b.expectedPrice || 0).toLocaleString('en-IN')}</div>
-                        <small style="font-size:11px;color:#6b7280">per ${b.quantityUnit || 'qtl'}</small>
-                      </td>
-                      <td>
                         <b>${dateDisplay}</b>
-                        <div style="font-size:12px;color:#4b5563">${b.timeSlot}</div>
                       </td>
                       <td>
-                        <div>${b.location || b.centreName || 'Gorakhpur APMC Mandi'}</div>
+                        <div style="font-size:12px;color:#4b5563">${timeDisplay}</div>
+                      </td>
+                      <td>
+                        <div>${mandiDisplay}</div>
+                      </td>
+                      <td>
+                        ${buyerDisplay}
                       </td>
                       <td>
                         ${getStatusBadge(b.status)}
-                        ${hasBuyerRequest ? `
-                          <div style="margin-top:4px">
-                            <span class="status-pill" style="background:#eff6ff;color:#2563eb;font-size:11px;padding:2px 6px">
-                              🛒 ${b.buyerRequests.length} Buyer Offer(s)
-                            </span>
-                          </div>
-                        ` : ''}
                       </td>
                       <td style="font-size:12px;color:#6b7280">
                         ${createdDate}
@@ -190,7 +198,7 @@ export function renderMyBookings({ user, bookings = [], t, onNavigate }) {
                               class="btn-cancel-booking btn-secondary btn-sm" 
                               style="color:#b91c1c;border-color:#fca5a5"
                               data-id="${bId}"
-                              data-crop="${b.cropName}"
+                              data-crop="${b.crop || b.cropName}"
                               title="Cancel booking"
                             >
                               ✕ Cancel

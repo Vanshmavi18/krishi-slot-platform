@@ -17,7 +17,10 @@ const bookingSchema = new mongoose.Schema({
   farmerName: { type: String, required: true },
   farmerPhone: { type: String },
   farmerEmail: { type: String, lowercase: true, trim: true },
+  // Crop & Product details
+  crop: { type: String }, // Prompt requested alias to cropName
   cropName: { type: String, required: true },
+  cropId: { type: String },
   quantity: { type: Number, required: true, min: [0.1, 'Quantity must be greater than 0'] },
   quantityUnit: { 
     type: String, 
@@ -25,10 +28,22 @@ const bookingSchema = new mongoose.Schema({
     default: 'quintal' 
   },
   expectedPrice: { type: Number, required: true, min: [0, 'Expected price must be non-negative'] },
+
+  // Slot timing & schedule details
+  slotId: { type: String, index: true },
+  slotDate: { type: String, index: true },
+  startTime: { type: String },
+  endTime: { type: String },
   preferredDate: { type: Date, required: true, index: true },
   timeSlot: { type: String, required: true },
+
+  // Mandi / Location details
   location: { type: String, required: true },
+  market: { type: String }, // Prompt requested alias
+  mandi: { type: String },  // Prompt requested alias
   notes: { type: String, default: '' },
+  adminNotes: { type: String, default: '' },
+  cancellationReason: { type: String, default: '' },
   
   // Buyer Assignment & Requests
   buyerId: { type: String, default: null, index: true },
@@ -47,7 +62,6 @@ const bookingSchema = new mongoose.Schema({
   token: { type: String, index: true },
   centreId: { type: String, index: true },
   centreName: { type: String },
-  cropId: { type: String },
   date: { type: String, index: true },
   displayDate: { type: String },
   vehicle: { type: String, default: 'Tractor Trolley' },

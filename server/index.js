@@ -32,7 +32,37 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Production & Local CORS Configuration
+const allowedOrigins = [
+  'https://agriqueue-1-d4x0.onrender.com',
+  'https://krishi-slot-platform.onrender.com',
+  'http://localhost:5173',
+  'http://localhost:5000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5000'
+];
+
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
+}
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.onrender.com')) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Permissive for onrender cloud deployment
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Preflight options handling for all routes
+app.options(/.*/, cors());
+
 app.use(express.json());
 
 // API Routes
@@ -53,7 +83,7 @@ app.get('/api/health', (req, res) => {
     service: 'AgriQueue Backend API',
     version: '2.0.0',
     time: new Date().toISOString(),
-    database: db.isMongoConnected ? 'MongoDB (Active)' : 'Persistent Storage (Active)'
+    database: db.isMongoConnected ? 'MongoDB Atlas (Connected)' : 'Persistent Storage (Active)'
   });
 });
 
@@ -79,17 +109,16 @@ app.use((req, res) => {
   });
 });
 
-// Start server and initialize database
-const server = app.listen(PORT, async () => {
+// Connect to database before accepting traffic
+await db.connectMongo();
+
+const server = app.listen(PORT, () => {
   console.log(`\n======================================================`);
   console.log(`🌱 AgriQueue API Server running on port ${PORT}`);
   console.log(`🔗 API Base: http://localhost:${PORT}/api`);
   console.log(`📡 SSE Queue Stream: http://localhost:${PORT}/api/queue/stream`);
   console.log(`📊 DB Health Check: http://localhost:${PORT}/api/db/status`);
   console.log(`======================================================\n`);
-
-  // Connect to MongoDB if configured
-  await db.connectMongo();
 });
 
 export { app, server };

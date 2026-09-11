@@ -100,8 +100,8 @@ async function runTests() {
         quantity: 65,
         quantityUnit: 'quintal',
         expectedPrice: 3850,
-        preferredDate: '2026-09-18',
-        timeSlot: '11:00 – 11:30 AM',
+        preferredDate: `2026-10-0${Math.floor(1 + Math.random() * 8)}`,
+        timeSlot: '10:30 – 11:00 AM',
         location: 'Jaitpur Procurement Centre',
         vehicle: 'Tractor Trolley',
         notes: 'Grain moisture tested at 12.2%, 50kg export bags'

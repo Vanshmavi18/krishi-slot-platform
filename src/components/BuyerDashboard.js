@@ -90,32 +90,50 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], availableBo
               <thead>
                 <tr>
                   <th>Booking ID</th>
-                  <th>Crop / Product</th>
+                  <th>Farmer Name</th>
+                  <th>Farmer ID</th>
+                  <th>Crop</th>
                   <th>Quantity</th>
-                  <th>Expected Price</th>
-                  <th>Scheduled Date</th>
-                  <th>Time Slot</th>
-                  <th>Location / Mandi</th>
-                  <th>Farmer (Seller)</th>
+                  <th>Booking Date</th>
+                  <th>Slot Time</th>
+                  <th>Mandi/Market</th>
                   <th>Status</th>
+                  <th>Created Date</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 ${availableBookings.length === 0 ? `
                   <tr>
-                    <td colspan="10" style="text-align:center;padding:36px;color:#9ca3af">
-                      No approved farmer slots available right now. Newly approved farmer bookings will appear here instantly.
+                    <td colspan="11" style="text-align:center;padding:36px;color:#9ca3af">
+                      No farmer bookings available right now. Newly booked farmer slots will appear here automatically.
                     </td>
                   </tr>
                 ` : availableBookings.map(b => {
                   const bId = b.bookingId || b.id;
-                  const dateDisplay = b.displayDate || (b.preferredDate ? new Date(b.preferredDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : b.date || 'TBD');
+                  const dateDisplay = b.displayDate || (b.preferredDate ? new Date(b.preferredDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : b.date || b.slotDate || 'TBD');
+                  const timeDisplay = b.timeSlot || `${b.startTime || ''} – ${b.endTime || ''}`.trim() || 'Scheduled';
+                  const mandiDisplay = b.location || b.market || b.mandi || b.centreName || 'APMC Mandi';
                   const requests = Array.isArray(b.buyerRequests) ? b.buyerRequests : [];
                   const alreadyRequested = requests.some(r => r.buyerId === currentBuyerId) || b.hasMyRequest;
+                  const createdDate = b.createdAt ? new Date(b.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent';
 
-                  // Mask farmer phone or last name for buyer privacy where appropriate
-                  const maskedName = b.farmerName || 'Registered Farmer';
+                  const farmerNameDisplay = b.farmerName || 'Registered Farmer';
+                  const farmerIdDisplay = b.farmerId || 'FRM-VERIFIED';
+
+                  const getBuyerStatusBadge = (st) => {
+                    switch (st) {
+                      case 'Pending':
+                        return '<span class="status-pill waiting" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a">⏳ Pending Review</span>';
+                      case 'Approved':
+                      case 'CONFIRMED':
+                        return '<span class="status-pill confirmed" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe">✓ Approved</span>';
+                      case 'Completed':
+                        return '<span class="status-pill paid" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0">✓ Completed</span>';
+                      default:
+                        return `<span class="status-pill">${st || 'Active'}</span>`;
+                    }
+                  };
 
                   return `
                     <tr>
@@ -124,33 +142,33 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], availableBo
                         ${b.token ? `<div style="font-size:11px;color:#6b7280">Token: #${b.token}</div>` : ''}
                       </td>
                       <td>
-                        <b>${b.cropName}</b>
+                        <b>${farmerNameDisplay}</b>
+                      </td>
+                      <td>
+                        <span style="font-size:12px;color:#4b5563;font-family:monospace">${farmerIdDisplay}</span>
+                      </td>
+                      <td>
+                        <b>${b.crop || b.cropName}</b>
                       </td>
                       <td>
                         <strong style="color:#0f766e;font-size:14px">${b.quantity}</strong>
                         <span style="font-size:12px;color:#6b7280">${b.quantityUnit || 'quintal'}</span>
-                      </td>
-                      <td>
-                        <div style="font-weight:700;color:#15803d">₹${Number(b.expectedPrice || 2300).toLocaleString('en-IN')}</div>
-                        <small style="font-size:10px;color:#6b7280">per ${b.quantityUnit || 'qtl'}</small>
+                        <div style="font-size:11px;color:#15803d">@ ₹${Number(b.expectedPrice || 2300).toLocaleString('en-IN')}/${b.quantityUnit || 'qtl'}</div>
                       </td>
                       <td>
                         <b>${dateDisplay}</b>
                       </td>
                       <td>
-                        <div style="font-size:12px;color:#4b5563">${b.timeSlot}</div>
+                        <div style="font-size:12px;color:#4b5563">${timeDisplay}</div>
                       </td>
                       <td>
-                        <div>${b.location || b.centreName || 'Jaitpur Mandi'}</div>
+                        <div>${mandiDisplay}</div>
                       </td>
                       <td>
-                        <div><b>${maskedName}</b></div>
-                        <small style="color:#9ca3af">ID: ${b.farmerId ? b.farmerId.slice(0, 10) + '••' : 'Verified'}</small>
+                        ${getBuyerStatusBadge(b.status)}
                       </td>
-                      <td>
-                        <span class="status-pill confirmed" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe">
-                          ${b.status || 'Approved'}
-                        </span>
+                      <td style="font-size:12px;color:#6b7280">
+                        ${createdDate}
                       </td>
                       <td>
                         ${alreadyRequested ? `

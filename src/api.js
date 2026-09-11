@@ -306,9 +306,13 @@ class ApiService {
     });
   }
 
+  async getFarmerBookings() {
+    return this.fetch('/api/bookings/farmer');
+  }
+
   async getMyBookings(farmerId) {
     try {
-      const res = await this.fetch('/api/bookings/my');
+      const res = await this.fetch('/api/bookings/farmer');
       return res;
     } catch (err) {
       // Fallback to legacy endpoint if token is unauthenticated
@@ -316,8 +320,12 @@ class ApiService {
     }
   }
 
+  async getBuyerBookings() {
+    return this.fetch('/api/bookings/buyer');
+  }
+
   async getAvailableBookings() {
-    return this.fetch('/api/bookings/available');
+    return this.fetch('/api/bookings/buyer');
   }
 
   async getBookingDetails(bookingId) {

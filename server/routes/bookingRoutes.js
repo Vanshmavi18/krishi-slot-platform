@@ -7,17 +7,28 @@ import { sendSms } from '../services/smsService.js';
 
 const router = Router();
 
-// Helper to look up a booking by bookingId or id
-function findBooking(id) {
-  return db.find('bookings', b => b.bookingId === id || b.id === id);
-}
+// Standard APMC Time Slots with Max Capacity
+const TIME_SLOTS = [
+  { id: 'slot-0900', label: '09:00 – 09:30 AM', maxCapacity: 15 },
+  { id: 'slot-1030', label: '10:30 – 11:00 AM', maxCapacity: 15 },
+  { id: 'slot-1200', label: '12:00 – 12:30 PM', maxCapacity: 15 },
+  { id: 'slot-1400', label: '02:00 – 02:30 PM', maxCapacity: 15 },
+  { id: 'slot-1530', label: '03:30 – 04:00 PM', maxCapacity: 15 }
+];
 
 /**
- * POST /api/bookings
+ * POST /api/bookings (also accepts /book)
  * Role: Farmer
- * Description: Create a new farmer slot booking
+ * Description: Create a new farmer slot booking in MongoDB with capacity & duplicate checks
  */
-router.post('/', authenticate, requireRole('farmer'), async (req, res) => {
+const createBookingHandler = async (req, res) => {
+  const farmerId = req.user?.id;
+  const farmerName = req.user?.name || 'Registered Farmer';
+  const farmerPhone = req.user?.phone || '';
+  const farmerEmail = req.user?.email || null;
+
+  console.log(`[BOOKING] Booking creation started for farmer: ${farmerId}`);
+
   try {
     const {
       cropName,
@@ -27,10 +38,11 @@ router.post('/', authenticate, requireRole('farmer'), async (req, res) => {
       preferredDate,
       timeSlot,
       location,
+      vehicle = 'Tractor Trolley',
       notes = ''
     } = req.body;
 
-    // Server-side field validations
+    // 1. Server-side field validations
     if (!cropName || typeof cropName !== 'string' || !cropName.trim()) {
       return res.status(400).json({ success: false, error: 'Crop/Product name is required' });
     }
@@ -52,12 +64,12 @@ router.post('/', authenticate, requireRole('farmer'), async (req, res) => {
     }
 
     if (!preferredDate) {
-      return res.status(400).json({ success: false, error: 'Preferred date is required' });
+      return res.status(400).json({ success: false, error: 'Preferred delivery date is required' });
     }
 
     const parsedDate = new Date(preferredDate);
     if (isNaN(parsedDate.getTime())) {
-      return res.status(400).json({ success: false, error: 'Preferred date is not a valid date' });
+      return res.status(400).json({ success: false, error: 'Preferred date is not a valid date format' });
     }
 
     if (!timeSlot || typeof timeSlot !== 'string' || !timeSlot.trim()) {
@@ -68,24 +80,77 @@ router.post('/', authenticate, requireRole('farmer'), async (req, res) => {
       return res.status(400).json({ success: false, error: 'Location / Mandi is required' });
     }
 
-    // Authenticated Farmer identity from verified session token (never trust client)
-    const farmerId = req.user.id;
-    const farmerName = req.user.name || 'Registered Farmer';
-    const farmerPhone = req.user.phone || '';
-    const farmerEmail = req.user.email || null;
+    const dateIso = parsedDate.toISOString().split('T')[0];
+    const cleanSlot = timeSlot.trim();
 
-    // Unique Booking ID & Gate Token generation
+    // 2. Validate Slot existence & Capacity limits (Section 8: Slot Availability)
+    const matchedSlotDef = TIME_SLOTS.find(
+      s => s.label === cleanSlot || s.id === cleanSlot || cleanSlot.includes(s.label.split('–')[0].trim())
+    );
+    const maxCapacity = matchedSlotDef?.maxCapacity || 15;
+
+    // Count existing active bookings for this date and time slot
+    const activeBookingCount = await db.countBookings(
+      {
+        $or: [{ date: dateIso }, { slotDate: dateIso }],
+        timeSlot: cleanSlot,
+        status: { $nin: ['Cancelled', 'CANCELLED', 'Rejected', 'REJECTED'] }
+      },
+      b => {
+        const st = (b.status || '').toUpperCase();
+        return (b.date === dateIso || b.slotDate === dateIso) &&
+          b.timeSlot === cleanSlot &&
+          st !== 'CANCELLED' && st !== 'REJECTED';
+      }
+    );
+
+    if (activeBookingCount >= maxCapacity) {
+      return res.status(409).json({
+        success: false,
+        error: `Selected time slot '${cleanSlot}' on ${dateIso} is at maximum capacity (${activeBookingCount}/${maxCapacity}). Please choose another slot.`
+      });
+    }
+
+    // 3. Prevent duplicate booking: Farmer already has an active booking for same slot
+    const existingDuplicate = await db.findOneBooking(
+      {
+        farmerId,
+        $or: [{ date: dateIso }, { slotDate: dateIso }],
+        timeSlot: cleanSlot,
+        status: { $nin: ['Cancelled', 'CANCELLED', 'Rejected', 'REJECTED'] }
+      },
+      b => {
+        const st = (b.status || '').toUpperCase();
+        return b.farmerId === farmerId &&
+          (b.date === dateIso || b.slotDate === dateIso) &&
+          b.timeSlot === cleanSlot &&
+          st !== 'CANCELLED' && st !== 'REJECTED';
+      }
+    );
+
+    if (existingDuplicate) {
+      return res.status(409).json({
+        success: false,
+        error: `You already have an active booking (#${existingDuplicate.bookingId || existingDuplicate.id}) for this date and time slot.`
+      });
+    }
+
+    // 4. Construct Unique Booking Document
     const bookingId = `BK-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const randomTokenNum = 40 + Math.floor(Math.random() * 60);
     const token = `A-${String(randomTokenNum).padStart(3, '0')}`;
 
-    const dateIso = parsedDate.toISOString().split('T')[0];
     const displayDate = parsedDate.toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
       weekday: 'long'
     });
+
+    const slotParts = cleanSlot.split('–');
+    const startTime = slotParts[0]?.trim() || cleanSlot;
+    const endTime = slotParts[1]?.trim() || cleanSlot;
+    const slotId = matchedSlotDef?.id || cleanSlot.toLowerCase().replace(/[^a-z0-9]/g, '_');
 
     const newBooking = {
       bookingId,
@@ -95,6 +160,7 @@ router.post('/', authenticate, requireRole('farmer'), async (req, res) => {
       farmerName,
       farmerPhone,
       farmerEmail,
+      crop: cropName.trim(), // Prompt requirement
       cropName: cropName.trim(),
       cropId: cropName.toLowerCase().replace(/[^a-z0-9]/g, '_'),
       quantity: qty,
@@ -103,51 +169,58 @@ router.post('/', authenticate, requireRole('farmer'), async (req, res) => {
       preferredDate: parsedDate,
       date: dateIso,
       displayDate,
-      timeSlot: timeSlot.trim(),
+      slotId,
+      slotDate: dateIso,
+      startTime,
+      endTime,
+      timeSlot: cleanSlot,
       location: location.trim(),
+      market: location.trim(),
+      mandi: location.trim(),
       centreId: 'CTR-UP-01',
       centreName: location.trim(),
       notes: String(notes || '').trim(),
+      adminNotes: '',
+      cancellationReason: '',
       buyerId: null,
       buyerName: null,
       buyerRequests: [],
       status: 'Pending',
       queueStatus: 'WAITING',
-      vehicle: 'Tractor Trolley',
+      vehicle: String(vehicle || 'Tractor Trolley').trim(),
       qrCodeData: `AGRIQUEUE|${bookingId}|${token}|${farmerId}|${qty}${cleanUnit}`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
 
-    // Save to Database (Dual persistence: MongoDB + Local store)
-    db.insert('bookings', newBooking);
+    // 5. Persist to MongoDB Atlas (via db.createBooking)
+    const savedBooking = await db.createBooking(newBooking);
+    console.log(`[BOOKING] Booking created successfully: ${bookingId}`);
 
-    // Notify Farmer of Pending Booking
+    // 6. Asynchronous Notification dispatch
     try {
       createNotification({
         userId: farmerId,
         role: 'farmer',
         type: 'SLOT_PENDING',
         title: `Booking Submitted: #${bookingId}`,
-        message: `Your booking for ${qty} ${cleanUnit} of ${newBooking.cropName} at ${newBooking.location} is submitted and Pending APMC Admin approval.`,
+        message: `Your booking for ${qty} ${cleanUnit} of ${newBooking.cropName} at ${newBooking.location} is submitted and Pending APMC Mandi review.`,
         category: 'slots',
         link: 'booking',
         meta: { bookingId, token }
       });
 
-      // Notify APMC Admin of New Booking
       createNotification({
         userId: 'APMC-ADMIN',
         role: 'admin',
         type: 'ADMIN_ALERT',
         title: `New Slot Booking #${bookingId}`,
-        message: `${farmerName} submitted a booking for ${qty} ${cleanUnit} ${newBooking.cropName} at ${newBooking.location}. Review and approve.`,
+        message: `${farmerName} booked delivery of ${qty} ${cleanUnit} ${newBooking.cropName} at ${newBooking.location}.`,
         category: 'slots',
         link: 'centre',
         meta: { bookingId, token }
       });
 
-      // Optional SMS alert to farmer
       if (farmerPhone) {
         sendSms({
           phone: farmerPhone,
@@ -157,33 +230,56 @@ router.post('/', authenticate, requireRole('farmer'), async (req, res) => {
         }).catch(() => {});
       }
     } catch (notifErr) {
-      console.warn('[BOOKING] Notification warning:', notifErr.message);
+      console.warn('[BOOKING] Notification dispatch warning:', notifErr.message);
     }
 
     res.status(201).json({
       success: true,
       bookingId,
-      booking: newBooking,
+      booking: savedBooking,
       message: `Booking #${bookingId} created successfully. Initial status is Pending.`
     });
   } catch (err) {
-    console.error('Error creating booking:', err);
-    res.status(500).json({ success: false, error: 'Internal server error while processing booking' });
+    console.error('[BOOKING] Error creating booking:', err.message);
+    
+    // Handle MongoDB duplicate key error
+    if (err.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        error: 'A booking with this ID already exists. Please try again.'
+      });
+    }
+
+    // Handle MongoDB Validation error
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: err.message
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Database error occurred while processing booking. Please try again.'
+    });
   }
-});
+};
+
+router.post('/', authenticate, requireRole('farmer'), createBookingHandler);
+router.post('/book', authenticate, requireRole('farmer'), createBookingHandler);
 
 /**
- * GET /api/bookings/my
+ * GET /api/bookings/farmer & GET /api/bookings/my
  * Role: Farmer
- * Description: View all bookings for the authenticated farmer
+ * Description: View all bookings belonging to the currently authenticated farmer from MongoDB
  */
-router.get('/my', authenticate, requireRole('farmer'), (req, res) => {
+const getFarmerBookingsHandler = async (req, res) => {
   try {
     const farmerId = req.user.id;
-    const bookings = db.filter('bookings', b => b.farmerId === farmerId);
-
-    // Sort descending by creation date
-    bookings.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    const bookings = await db.getBookings(
+      b => b.farmerId === farmerId,
+      { farmerId }
+    );
 
     res.json({
       success: true,
@@ -191,32 +287,58 @@ router.get('/my', authenticate, requireRole('farmer'), (req, res) => {
       bookings
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to retrieve farmer bookings' });
+    console.error('[BOOKING] Booking fetch failed for farmer:', err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve farmer bookings from database'
+    });
   }
-});
+};
+
+router.get('/farmer', authenticate, requireRole('farmer'), getFarmerBookingsHandler);
+router.get('/my', authenticate, requireRole('farmer'), getFarmerBookingsHandler);
 
 /**
- * GET /api/bookings/available
+ * GET /api/bookings/buyer & GET /api/bookings/available
  * Role: Authenticated (Buyer, Officer, Admin)
- * Description: View approved farmer slots available for buyers to purchase/request
+ * Description: View active farmer bookings available for buyers to view & request
  */
-router.get('/available', authenticate, (req, res) => {
+const getBuyerBookingsHandler = async (req, res) => {
   try {
-    // Only return Approved bookings that are not completed or cancelled
-    const available = db.filter('bookings', b => b.status === 'Approved');
+    const currentUserId = req.user?.id;
+    const isBuyer = req.user?.role === 'buyer';
 
-    // Sort by arrival date
-    available.sort((a, b) => new Date(a.preferredDate || a.date || 0) - new Date(b.preferredDate || b.date || 0));
+    // Return active bookings (exclude Cancelled and Rejected)
+    // If a booking is targeted to a specific buyer, show only to that buyer
+    const mongoFilter = {
+      status: { $nin: ['Cancelled', 'CANCELLED', 'Rejected', 'REJECTED'] },
+      $or: [
+        { buyerId: null },
+        { buyerId: '' },
+        { buyerId: currentUserId },
+        { 'buyerRequests.buyerId': currentUserId }
+      ]
+    };
 
-    // For privacy, mask farmer contact details if requester is a Buyer
-    const isBuyer = req.user.role === 'buyer';
-    const sanitized = available.map(b => {
+    const bookings = await db.getBookings(
+      b => {
+        const st = (b.status || '').toUpperCase();
+        if (st === 'CANCELLED' || st === 'REJECTED') return false;
+        if (!b.buyerId || b.buyerId === currentUserId) return true;
+        if (Array.isArray(b.buyerRequests) && b.buyerRequests.some(r => r.buyerId === currentUserId)) return true;
+        return false;
+      },
+      mongoFilter
+    );
+
+    // Sanitize contact info for privacy if requester is commercial buyer
+    const sanitized = bookings.map(b => {
       if (!isBuyer) return b;
       return {
         ...b,
-        farmerPhone: b.farmerPhone ? `XXXXXX${b.farmerPhone.slice(-4)}` : undefined,
+        farmerPhone: b.farmerPhone ? `XXXXXX${String(b.farmerPhone).slice(-4)}` : undefined,
         farmerEmail: undefined,
-        hasMyRequest: Array.isArray(b.buyerRequests) && b.buyerRequests.some(r => r.buyerId === req.user.id)
+        hasMyRequest: Array.isArray(b.buyerRequests) && b.buyerRequests.some(r => r.buyerId === currentUserId)
       };
     });
 
@@ -226,61 +348,68 @@ router.get('/available', authenticate, (req, res) => {
       bookings: sanitized
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to retrieve available bookings' });
+    console.error('[BOOKING] Booking fetch failed for buyer:', err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve buyer bookings from database'
+    });
   }
-});
+};
+
+router.get('/buyer', authenticate, getBuyerBookingsHandler);
+router.get('/available', authenticate, getBuyerBookingsHandler);
 
 /**
- * GET /api/admin/bookings
+ * GET /api/bookings/admin
  * Role: Admin, Officer
- * Description: View all bookings across the entire system
+ * Description: View all bookings across the entire system from MongoDB
  */
-router.get('/admin', authenticate, requireRole('admin', 'officer'), (req, res) => {
+router.get('/admin', authenticate, requireRole('admin', 'officer'), async (req, res) => {
   try {
-    const bookings = db.get('bookings') || [];
-    
-    // Sort descending by created date
-    const sorted = [...bookings].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    const bookings = await db.getBookings(
+      () => true,
+      {}
+    );
 
     res.json({
       success: true,
-      count: sorted.length,
-      bookings: sorted
+      count: bookings.length,
+      bookings
     });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to retrieve admin bookings' });
+    console.error('[BOOKING] Admin bookings fetch failed:', err.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve admin bookings from database'
+    });
   }
 });
 
 /**
  * GET /api/bookings/:id
  * Role: Authenticated
- * Description: View a specific booking's full details (with strict role-based authorization)
+ * Description: View a specific booking's full details (with strict role authorization)
  */
-router.get('/:id', authenticate, (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
   try {
-    const booking = findBooking(req.params.id);
+    const booking = await db.findBookingById(req.params.id);
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' });
     }
 
     const { role, id: userId } = req.user;
-
-    // Authorization check:
-    // - Admin / Officer can view any booking
-    // - Farmer can only view their own booking
-    // - Buyer can only view Approved bookings or bookings they have requested
     const isOwner = booking.farmerId === userId;
     const isAdmin = role === 'admin' || role === 'officer';
     const isAssignedBuyer = booking.buyerId === userId || (Array.isArray(booking.buyerRequests) && booking.buyerRequests.some(r => r.buyerId === userId));
-    const isApproved = booking.status === 'Approved';
+    const isAvailable = booking.status !== 'Cancelled' && booking.status !== 'Rejected';
 
-    if (!isAdmin && !isOwner && !(role === 'buyer' && (isApproved || isAssignedBuyer))) {
+    if (!isAdmin && !isOwner && !(role === 'buyer' && (isAvailable || isAssignedBuyer))) {
       return res.status(403).json({ success: false, error: 'Access denied: You do not have permission to view this booking' });
     }
 
     res.json({ success: true, booking });
   } catch (err) {
+    console.error('[BOOKING] Error retrieving booking details:', err.message);
     res.status(500).json({ success: false, error: 'Error retrieving booking details' });
   }
 });
@@ -288,12 +417,12 @@ router.get('/:id', authenticate, (req, res) => {
 /**
  * PATCH /api/bookings/:id/status
  * Role: Admin, Officer
- * Description: Update booking status with strict state machine transition validation
+ * Description: Update booking status with state machine transitions in MongoDB
  */
-router.patch('/:id/status', authenticate, requireRole('admin', 'officer'), (req, res) => {
+router.patch('/:id/status', authenticate, requireRole('admin', 'officer'), async (req, res) => {
   try {
     const { status, notes } = req.body;
-    const booking = findBooking(req.params.id);
+    const booking = await db.findBookingById(req.params.id);
 
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' });
@@ -309,15 +438,10 @@ router.patch('/:id/status', authenticate, requireRole('admin', 'officer'), (req,
 
     const currentStatus = booking.status || 'Pending';
 
-    // Allowed State Machine Transitions:
-    // - Pending -> Approved, Rejected, Cancelled
-    // - Approved -> Completed, Cancelled
-    // - Completed -> (terminal state, no transition)
-    // - Rejected -> (terminal state, no transition)
-    // - Cancelled -> (terminal state, no transition)
+    // Allowed State Machine Transitions
     const allowedTransitions = {
       'Pending': ['Approved', 'Rejected', 'Cancelled'],
-      'CONFIRMED': ['Approved', 'Completed', 'Cancelled'], // legacy alias
+      'CONFIRMED': ['Approved', 'Completed', 'Cancelled'],
       'Approved': ['Completed', 'Cancelled'],
       'Rejected': [],
       'Completed': [],
@@ -335,51 +459,50 @@ router.patch('/:id/status', authenticate, requireRole('admin', 'officer'), (req,
       });
     }
 
-    // Apply status update
-    const updated = db.update('bookings', b => b.bookingId === booking.bookingId || b.id === booking.id, b => ({
-      ...b,
+    // Apply status update in MongoDB Atlas and local store
+    const updatePayload = {
       status,
-      adminNotes: notes ? String(notes).trim() : b.adminNotes,
-      updatedAt: new Date().toISOString()
-    }));
+      adminNotes: notes ? String(notes).trim() : (booking.adminNotes || '')
+    };
 
-    // Notify Farmer of status update
+    const updated = await db.updateBooking(booking.bookingId || booking.id, updatePayload);
+
+    // Notify Farmer of status change
     try {
       createNotification({
         userId: booking.farmerId,
         role: 'farmer',
         type: `SLOT_${status.toUpperCase()}`,
-        title: `Booking ${status}: #${booking.bookingId}`,
+        title: `Booking ${status}: #${booking.bookingId || booking.id}`,
         message: `Your booking for ${booking.quantity} ${booking.quantityUnit || 'quintal'} ${booking.cropName} is now marked as ${status}.${notes ? ` Note: ${notes}` : ''}`,
         category: 'slots',
         link: 'booking',
-        meta: { bookingId: booking.bookingId, status }
+        meta: { bookingId: booking.bookingId || booking.id, status }
       });
 
-      // If buyer was involved, notify buyer
       if (booking.buyerId) {
         createNotification({
           userId: booking.buyerId,
           role: 'buyer',
           type: 'ORDER_UPDATE',
-          title: `Slot #${booking.bookingId} Update`,
-          message: `Slot #${booking.bookingId} (${booking.cropName}) status changed to ${status}.`,
+          title: `Slot #${booking.bookingId || booking.id} Update`,
+          message: `Slot #${booking.bookingId || booking.id} (${booking.cropName}) status changed to ${status}.`,
           category: 'orders',
           link: 'buyer',
-          meta: { bookingId: booking.bookingId, status }
+          meta: { bookingId: booking.bookingId || booking.id, status }
         });
       }
     } catch (e) {
-      console.warn('Failed to send status update notification:', e);
+      console.warn('[BOOKING] Notification warning:', e.message);
     }
 
     res.json({
       success: true,
       booking: updated,
-      message: `Booking #${booking.bookingId} status updated to ${status}`
+      message: `Booking #${booking.bookingId || booking.id} status updated to ${status}`
     });
   } catch (err) {
-    console.error('Status update error:', err);
+    console.error('[BOOKING] Status update error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to update booking status' });
   }
 });
@@ -387,19 +510,20 @@ router.patch('/:id/status', authenticate, requireRole('admin', 'officer'), (req,
 /**
  * POST /api/bookings/:id/buy-request
  * Role: Buyer
- * Description: Buyer requests to purchase / procure an approved farmer slot
+ * Description: Buyer submits a purchase request for a farmer booking
  */
-router.post('/:id/buy-request', authenticate, requireRole('buyer'), (req, res) => {
+router.post('/:id/buy-request', authenticate, requireRole('buyer'), async (req, res) => {
   try {
-    const booking = findBooking(req.params.id);
+    const booking = await db.findBookingById(req.params.id);
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' });
     }
 
-    if (booking.status !== 'Approved') {
+    const currentStatus = (booking.status || '').toUpperCase();
+    if (currentStatus === 'CANCELLED' || currentStatus === 'REJECTED') {
       return res.status(400).json({
         success: false,
-        error: `Cannot request slot. Only 'Approved' slots can be requested (current status: '${booking.status}').`
+        error: `Cannot request slot. This slot is ${booking.status}.`
       });
     }
 
@@ -418,7 +542,7 @@ router.post('/:id/buy-request', authenticate, requireRole('buyer'), (req, res) =
       });
     }
 
-    const price = offeredPrice ? Number(offeredPrice) : booking.expectedPrice;
+    const price = offeredPrice ? Number(offeredPrice) : (booking.expectedPrice || 2300);
     const newRequest = {
       buyerId,
       buyerName,
@@ -429,49 +553,48 @@ router.post('/:id/buy-request', authenticate, requireRole('buyer'), (req, res) =
 
     const updatedRequests = [...existingRequests, newRequest];
 
-    const updated = db.update('bookings', b => b.bookingId === booking.bookingId || b.id === booking.id, b => ({
-      ...b,
-      buyerId: b.buyerId || buyerId, // Set as primary buyer if none assigned
-      buyerName: b.buyerName || buyerName,
-      buyerRequests: updatedRequests,
-      updatedAt: new Date().toISOString()
-    }));
+    const updatePayload = {
+      buyerId: booking.buyerId || buyerId, // Set as primary buyer if none assigned
+      buyerName: booking.buyerName || buyerName,
+      buyerRequests: updatedRequests
+    };
 
-    // Notify Farmer of Buyer interest
+    const updated = await db.updateBooking(booking.bookingId || booking.id, updatePayload);
+
+    // Notify Farmer of Buyer Interest
     try {
       createNotification({
         userId: booking.farmerId,
         role: 'farmer',
         type: 'BUYER_REQUEST',
-        title: `Buyer Request: #${booking.bookingId}`,
-        message: `${buyerName} submitted an offer of ₹${price}/${booking.quantityUnit || 'qtl'} for your ${booking.quantity} ${booking.quantityUnit || 'qtl'} ${booking.cropName}.`,
+        title: `Buyer Offer: #${booking.bookingId || booking.id}`,
+        message: `${buyerName} submitted a purchase offer of ₹${price}/${booking.quantityUnit || 'qtl'} for your ${booking.quantity} ${booking.quantityUnit || 'qtl'} ${booking.cropName}.`,
         category: 'marketplace',
         link: 'booking',
-        meta: { bookingId: booking.bookingId, buyerId, offeredPrice: price }
+        meta: { bookingId: booking.bookingId || booking.id, buyerId, offeredPrice: price }
       });
 
-      // Notify Mandi Admin
       createNotification({
         userId: 'APMC-ADMIN',
         role: 'admin',
         type: 'ADMIN_ALERT',
-        title: `Buyer Request on Slot #${booking.bookingId}`,
+        title: `Buyer Request on Slot #${booking.bookingId || booking.id}`,
         message: `${buyerName} requested to purchase ${booking.farmerName}'s ${booking.cropName} (${booking.quantity} ${booking.quantityUnit || 'qtl'}).`,
         category: 'orders',
         link: 'centre',
-        meta: { bookingId: booking.bookingId, buyerId }
+        meta: { bookingId: booking.bookingId || booking.id, buyerId }
       });
     } catch (e) {
-      console.warn('Failed to send buyer request notification:', e);
+      console.warn('[BOOKING] Buyer request notification warning:', e.message);
     }
 
     res.json({
       success: true,
       booking: updated,
-      message: `Purchase request submitted for Slot #${booking.bookingId}`
+      message: `Purchase request submitted for Slot #${booking.bookingId || booking.id}`
     });
   } catch (err) {
-    console.error('Buy request error:', err);
+    console.error('[BOOKING] Buy request error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to submit buyer request' });
   }
 });
@@ -481,9 +604,9 @@ router.post('/:id/buy-request', authenticate, requireRole('buyer'), (req, res) =
  * Role: Farmer (own booking) or Admin
  * Description: Cancel a booking with authorization and status check
  */
-router.patch('/:id/cancel', authenticate, (req, res) => {
+router.patch('/:id/cancel', authenticate, async (req, res) => {
   try {
-    const booking = findBooking(req.params.id);
+    const booking = await db.findBookingById(req.params.id);
     if (!booking) {
       return res.status(404).json({ success: false, error: 'Booking not found' });
     }
@@ -496,7 +619,6 @@ router.patch('/:id/cancel', authenticate, (req, res) => {
       return res.status(403).json({ success: false, error: 'Unauthorized to cancel this booking' });
     }
 
-    // Completed bookings cannot be cancelled
     if (booking.status === 'Completed') {
       return res.status(400).json({ success: false, error: 'Completed bookings cannot be cancelled' });
     }
@@ -507,49 +629,49 @@ router.patch('/:id/cancel', authenticate, (req, res) => {
 
     const { reason = '' } = req.body;
 
-    const updated = db.update('bookings', b => b.bookingId === booking.bookingId || b.id === booking.id, b => ({
-      ...b,
+    const updatePayload = {
       status: 'Cancelled',
-      cancellationReason: reason ? String(reason).trim() : 'Cancelled by user',
-      updatedAt: new Date().toISOString()
-    }));
+      cancellationReason: reason ? String(reason).trim() : (isOwner ? 'Cancelled by Farmer' : 'Cancelled by Mandi Admin')
+    };
 
-    // Notify Farmer if cancelled by Admin, or notify Admin if cancelled by Farmer
+    const updated = await db.updateBooking(booking.bookingId || booking.id, updatePayload);
+
+    // Notify respective parties
     try {
       if (isAdmin && !isOwner) {
         createNotification({
           userId: booking.farmerId,
           role: 'farmer',
           type: 'SLOT_CANCELLED',
-          title: `Booking Cancelled: #${booking.bookingId}`,
+          title: `Booking Cancelled: #${booking.bookingId || booking.id}`,
           message: `Your booking for ${booking.cropName} has been cancelled by Mandi Administration.${reason ? ` Reason: ${reason}` : ''}`,
           category: 'slots',
           link: 'booking',
-          meta: { bookingId: booking.bookingId }
+          meta: { bookingId: booking.bookingId || booking.id }
         });
       } else {
         createNotification({
           userId: 'APMC-ADMIN',
           role: 'admin',
           type: 'ADMIN_ALERT',
-          title: `Farmer Cancelled Booking #${booking.bookingId}`,
+          title: `Farmer Cancelled Booking #${booking.bookingId || booking.id}`,
           message: `${booking.farmerName} cancelled their ${booking.cropName} delivery slot.${reason ? ` Reason: ${reason}` : ''}`,
           category: 'slots',
           link: 'centre',
-          meta: { bookingId: booking.bookingId }
+          meta: { bookingId: booking.bookingId || booking.id }
         });
       }
     } catch (e) {
-      console.warn('Failed to send cancellation notification:', e);
+      console.warn('[BOOKING] Cancellation notification warning:', e.message);
     }
 
     res.json({
       success: true,
       booking: updated,
-      message: `Booking #${booking.bookingId} has been cancelled.`
+      message: `Booking #${booking.bookingId || booking.id} has been cancelled.`
     });
   } catch (err) {
-    console.error('Cancellation error:', err);
+    console.error('[BOOKING] Cancellation error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to cancel booking' });
   }
 });

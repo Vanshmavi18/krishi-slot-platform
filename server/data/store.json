@@ -255,6 +255,182 @@
   ],
   "bookings": [
     {
+      "bookingId": "BK-2026-6839",
+      "id": "BK-2026-6839",
+      "token": "A-085",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "farmerEmail": "ramesh.farmer@krishislot.in",
+      "crop": "Mustard Seeds",
+      "cropName": "Mustard Seeds",
+      "cropId": "mustard_seeds",
+      "quantity": 20,
+      "quantityUnit": "quintal",
+      "expectedPrice": 5600,
+      "preferredDate": "2026-09-20T00:00:00.000Z",
+      "date": "2026-09-20",
+      "displayDate": "Sunday 20 September, 2026",
+      "slotId": "slot-0900",
+      "slotDate": "2026-09-20",
+      "startTime": "09:00",
+      "endTime": "09:30 AM",
+      "timeSlot": "09:00 – 09:30 AM",
+      "location": "Gorakhpur Mandi",
+      "market": "Gorakhpur Mandi",
+      "mandi": "Gorakhpur Mandi",
+      "centreId": "CTR-UP-01",
+      "centreName": "Gorakhpur Mandi",
+      "notes": "",
+      "adminNotes": "",
+      "cancellationReason": "Crop harvest postponed",
+      "buyerId": null,
+      "buyerName": null,
+      "buyerRequests": [],
+      "status": "Cancelled",
+      "queueStatus": "WAITING",
+      "vehicle": "Tractor Trolley",
+      "qrCodeData": "AGRIQUEUE|BK-2026-6839|A-085|FRM-UP-26032|20quintal",
+      "createdAt": "2026-09-11T10:00:14.274Z",
+      "updatedAt": "2026-09-11T10:00:14.278Z"
+    },
+    {
+      "bookingId": "BK-2026-5051",
+      "id": "BK-2026-5051",
+      "token": "A-058",
+      "farmerId": "FRM-UP-26032",
+      "farmerName": "Ramesh Kumar",
+      "farmerPhone": "9876543210",
+      "farmerEmail": "ramesh.farmer@krishislot.in",
+      "crop": "Basmati Paddy 1121",
+      "cropName": "Basmati Paddy 1121",
+      "cropId": "basmati_paddy_1121",
+      "quantity": 65,
+      "quantityUnit": "quintal",
+      "expectedPrice": 3850,
+      "preferredDate": "2026-10-02T00:00:00.000Z",
+      "date": "2026-10-02",
+      "displayDate": "Friday 2 October, 2026",
+      "slotId": "slot-1030",
+      "slotDate": "2026-10-02",
+      "startTime": "10:30",
+      "endTime": "11:00 AM",
+      "timeSlot": "10:30 – 11:00 AM",
+      "location": "Jaitpur Procurement Centre",
+      "market": "Jaitpur Procurement Centre",
+      "mandi": "Jaitpur Procurement Centre",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "notes": "Grain moisture tested at 12.2%, 50kg export bags",
+      "adminNotes": "Produce weighed, payment cleared.",
+      "cancellationReason": "",
+      "buyerId": "BUYER-01",
+      "buyerName": "AgroCorp Foods Pvt Ltd",
+      "buyerRequests": [
+        {
+          "buyerId": "BUYER-01",
+          "buyerName": "AgroCorp Foods Pvt Ltd",
+          "offeredPrice": 3900,
+          "notes": "AgroCorp willing to purchase entire 65 quintal lot at premium rate.",
+          "requestedAt": "2026-09-11T10:00:14.265Z"
+        }
+      ],
+      "status": "Completed",
+      "queueStatus": "WAITING",
+      "vehicle": "Tractor Trolley",
+      "qrCodeData": "AGRIQUEUE|BK-2026-5051|A-058|FRM-UP-26032|65quintal",
+      "createdAt": "2026-09-11T10:00:14.251Z",
+      "updatedAt": "2026-09-11T10:00:14.269Z"
+    },
+    {
+      "bookingId": "BK-2026-3616",
+      "id": "BK-2026-3616",
+      "token": "A-062",
+      "farmerId": "FRM-TEST-001",
+      "farmerName": "Kisan Balwan Singh",
+      "farmerPhone": "9876543210",
+      "farmerEmail": "balwan@agriqueue.in",
+      "crop": "Basmati Paddy 1121",
+      "cropName": "Basmati Paddy 1121",
+      "cropId": "basmati_paddy_1121",
+      "quantity": 65,
+      "quantityUnit": "quintal",
+      "expectedPrice": 3250,
+      "preferredDate": "2026-09-18T00:00:00.000Z",
+      "date": "2026-09-18",
+      "displayDate": "Friday 18 September, 2026",
+      "slotId": "slot-1400",
+      "slotDate": "2026-09-18",
+      "startTime": "02:00",
+      "endTime": "02:30 PM",
+      "timeSlot": "02:00 – 02:30 PM",
+      "location": "Jaitpur Procurement Centre",
+      "market": "Jaitpur Procurement Centre",
+      "mandi": "Jaitpur Procurement Centre",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "notes": "Cleaned, moisture ~11.8%",
+      "adminNotes": "",
+      "cancellationReason": "Harvest postponed by rain",
+      "buyerId": null,
+      "buyerName": null,
+      "buyerRequests": [],
+      "status": "Cancelled",
+      "queueStatus": "WAITING",
+      "vehicle": "Tractor Trolley (UP-53-T-4412)",
+      "qrCodeData": "AGRIQUEUE|BK-2026-3616|A-062|FRM-TEST-001|65quintal",
+      "createdAt": "2026-09-11T09:59:54.854Z",
+      "updatedAt": "2026-09-11T09:59:54.860Z"
+    },
+    {
+      "bookingId": "BK-2026-7262",
+      "id": "BK-2026-7262",
+      "token": "A-056",
+      "farmerId": "FRM-TEST-001",
+      "farmerName": "Kisan Balwan Singh",
+      "farmerPhone": "9876543210",
+      "farmerEmail": "balwan@agriqueue.in",
+      "crop": "Basmati Paddy 1121",
+      "cropName": "Basmati Paddy 1121",
+      "cropId": "basmati_paddy_1121",
+      "quantity": 65,
+      "quantityUnit": "quintal",
+      "expectedPrice": 3250,
+      "preferredDate": "2026-09-18T00:00:00.000Z",
+      "date": "2026-09-18",
+      "displayDate": "Friday 18 September, 2026",
+      "slotId": "slot-1030",
+      "slotDate": "2026-09-18",
+      "startTime": "10:30",
+      "endTime": "11:00 AM",
+      "timeSlot": "10:30 – 11:00 AM",
+      "location": "Jaitpur Procurement Centre",
+      "market": "Jaitpur Procurement Centre",
+      "mandi": "Jaitpur Procurement Centre",
+      "centreId": "CTR-UP-01",
+      "centreName": "Jaitpur Procurement Centre",
+      "notes": "Cleaned, moisture ~11.8%",
+      "adminNotes": "Produce received and weighed",
+      "cancellationReason": "",
+      "buyerId": "BUYER-TEST-01",
+      "buyerName": "ITC Agrotech Buyer",
+      "buyerRequests": [
+        {
+          "buyerId": "BUYER-TEST-01",
+          "buyerName": "ITC Agrotech Buyer",
+          "offeredPrice": 3300,
+          "notes": "Ready for prompt procurement with direct weighbridge clearance",
+          "requestedAt": "2026-09-11T09:59:54.836Z"
+        }
+      ],
+      "status": "Completed",
+      "queueStatus": "WAITING",
+      "vehicle": "Tractor Trolley (UP-53-T-4412)",
+      "qrCodeData": "AGRIQUEUE|BK-2026-7262|A-056|FRM-TEST-001|65quintal",
+      "createdAt": "2026-09-11T09:59:54.813Z",
+      "updatedAt": "2026-09-11T09:59:54.847Z"
+    },
+    {
       "bookingId": "BK-2026-4478",
       "id": "BK-2026-4478",
       "token": "A-076",
@@ -1310,6 +1486,50 @@
     }
   ],
   "smsLogs": [
+    {
+      "id": "SMS-1789120814276-637",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "AQ-MANDI",
+      "type": "CUSTOM",
+      "message": "Namaste Ramesh Kumar, your slot booking #BK-2026-6839 for 20 quintal Mustard Seeds is received (Status: Pending). AgriQueue APMC.",
+      "timestamp": "2026-09-11T10:00:14.276Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1789120814255-332",
+      "phone": "9876543210",
+      "recipientName": "Ramesh Kumar",
+      "senderId": "AQ-MANDI",
+      "type": "CUSTOM",
+      "message": "Namaste Ramesh Kumar, your slot booking #BK-2026-5051 for 65 quintal Basmati Paddy 1121 is received (Status: Pending). AgriQueue APMC.",
+      "timestamp": "2026-09-11T10:00:14.255Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1789120794856-318",
+      "phone": "9876543210",
+      "recipientName": "Kisan Balwan Singh",
+      "senderId": "AQ-MANDI",
+      "type": "CUSTOM",
+      "message": "Namaste Kisan Balwan Singh, your slot booking #BK-2026-3616 for 65 quintal Basmati Paddy 1121 is received (Status: Pending). AgriQueue APMC.",
+      "timestamp": "2026-09-11T09:59:54.856Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
+    {
+      "id": "SMS-1789120794818-423",
+      "phone": "9876543210",
+      "recipientName": "Kisan Balwan Singh",
+      "senderId": "AQ-MANDI",
+      "type": "CUSTOM",
+      "message": "Namaste Kisan Balwan Singh, your slot booking #BK-2026-7262 for 65 quintal Basmati Paddy 1121 is received (Status: Pending). AgriQueue APMC.",
+      "timestamp": "2026-09-11T09:59:54.818Z",
+      "status": "DELIVERED",
+      "gateway": "VIRTUAL_SIMULATOR"
+    },
     {
       "id": "SMS-1789113112806-476",
       "phone": "9876543210",
@@ -2927,6 +3147,342 @@
     }
   ],
   "notifications": [
+    {
+      "id": "NOTIF-1789120814279-809",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "Farmer Cancelled Booking #BK-2026-6839",
+      "message": "Ramesh Kumar cancelled their Mustard Seeds delivery slot. Reason: Crop harvest postponed",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-6839"
+      },
+      "timestamp": "2026-09-11T10:00:14.279Z"
+    },
+    {
+      "id": "NOTIF-1789120814275-551",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booking #BK-2026-6839",
+      "message": "Ramesh Kumar booked delivery of 20 quintal Mustard Seeds at Gorakhpur Mandi.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-6839",
+        "token": "A-085"
+      },
+      "timestamp": "2026-09-11T10:00:14.275Z"
+    },
+    {
+      "id": "NOTIF-1789120814275-554",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_PENDING",
+      "title": "Booking Submitted: #BK-2026-6839",
+      "message": "Your booking for 20 quintal of Mustard Seeds at Gorakhpur Mandi is submitted and Pending APMC Mandi review.",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-6839",
+        "token": "A-085"
+      },
+      "timestamp": "2026-09-11T10:00:14.275Z"
+    },
+    {
+      "id": "NOTIF-1789120814271-470",
+      "userId": "BUYER-01",
+      "role": "buyer",
+      "type": "ORDER_UPDATE",
+      "title": "Slot #BK-2026-5051 Update",
+      "message": "Slot #BK-2026-5051 (Basmati Paddy 1121) status changed to Completed.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "bookingId": "BK-2026-5051",
+        "status": "Completed"
+      },
+      "timestamp": "2026-09-11T10:00:14.271Z"
+    },
+    {
+      "id": "NOTIF-1789120814270-849",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_COMPLETED",
+      "title": "Booking Completed: #BK-2026-5051",
+      "message": "Your booking for 65 quintal Basmati Paddy 1121 is now marked as Completed. Note: Produce weighed, payment cleared.",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-5051",
+        "status": "Completed"
+      },
+      "timestamp": "2026-09-11T10:00:14.270Z"
+    },
+    {
+      "id": "NOTIF-1789120814266-444",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "Buyer Request on Slot #BK-2026-5051",
+      "message": "AgroCorp Foods Pvt Ltd requested to purchase Ramesh Kumar's Basmati Paddy 1121 (65 quintal).",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-5051",
+        "buyerId": "BUYER-01"
+      },
+      "timestamp": "2026-09-11T10:00:14.266Z"
+    },
+    {
+      "id": "NOTIF-1789120814266-892",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "BUYER_REQUEST",
+      "title": "Buyer Offer: #BK-2026-5051",
+      "message": "AgroCorp Foods Pvt Ltd submitted a purchase offer of ₹3900/quintal for your 65 quintal Basmati Paddy 1121.",
+      "category": "marketplace",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-5051",
+        "buyerId": "BUYER-01",
+        "offeredPrice": 3900
+      },
+      "timestamp": "2026-09-11T10:00:14.266Z"
+    },
+    {
+      "id": "NOTIF-1789120814261-930",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_APPROVED",
+      "title": "Booking Approved: #BK-2026-5051",
+      "message": "Your booking for 65 quintal Basmati Paddy 1121 is now marked as Approved. Note: Mandi documents verified. Approved for Counter 2 entry.",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-5051",
+        "status": "Approved"
+      },
+      "timestamp": "2026-09-11T10:00:14.261Z"
+    },
+    {
+      "id": "NOTIF-1789120814253-408",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booking #BK-2026-5051",
+      "message": "Ramesh Kumar booked delivery of 65 quintal Basmati Paddy 1121 at Jaitpur Procurement Centre.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-5051",
+        "token": "A-058"
+      },
+      "timestamp": "2026-09-11T10:00:14.253Z"
+    },
+    {
+      "id": "NOTIF-1789120814252-661",
+      "userId": "FRM-UP-26032",
+      "role": "farmer",
+      "type": "SLOT_PENDING",
+      "title": "Booking Submitted: #BK-2026-5051",
+      "message": "Your booking for 65 quintal of Basmati Paddy 1121 at Jaitpur Procurement Centre is submitted and Pending APMC Mandi review.",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-5051",
+        "token": "A-058"
+      },
+      "timestamp": "2026-09-11T10:00:14.252Z"
+    },
+    {
+      "id": "NOTIF-1789120794861-860",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "Farmer Cancelled Booking #BK-2026-3616",
+      "message": "Kisan Balwan Singh cancelled their Basmati Paddy 1121 delivery slot. Reason: Harvest postponed by rain",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-3616"
+      },
+      "timestamp": "2026-09-11T09:59:54.861Z"
+    },
+    {
+      "id": "NOTIF-1789120794856-543",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booking #BK-2026-3616",
+      "message": "Kisan Balwan Singh booked delivery of 65 quintal Basmati Paddy 1121 at Jaitpur Procurement Centre.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-3616",
+        "token": "A-062"
+      },
+      "timestamp": "2026-09-11T09:59:54.856Z"
+    },
+    {
+      "id": "NOTIF-1789120794855-527",
+      "userId": "FRM-TEST-001",
+      "role": "farmer",
+      "type": "SLOT_PENDING",
+      "title": "Booking Submitted: #BK-2026-3616",
+      "message": "Your booking for 65 quintal of Basmati Paddy 1121 at Jaitpur Procurement Centre is submitted and Pending APMC Mandi review.",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-3616",
+        "token": "A-062"
+      },
+      "timestamp": "2026-09-11T09:59:54.855Z"
+    },
+    {
+      "id": "NOTIF-1789120794849-195",
+      "userId": "BUYER-TEST-01",
+      "role": "buyer",
+      "type": "ORDER_UPDATE",
+      "title": "Slot #BK-2026-7262 Update",
+      "message": "Slot #BK-2026-7262 (Basmati Paddy 1121) status changed to Completed.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "status": "Completed"
+      },
+      "timestamp": "2026-09-11T09:59:54.849Z"
+    },
+    {
+      "id": "NOTIF-1789120794848-902",
+      "userId": "FRM-TEST-001",
+      "role": "farmer",
+      "type": "SLOT_COMPLETED",
+      "title": "Booking Completed: #BK-2026-7262",
+      "message": "Your booking for 65 quintal Basmati Paddy 1121 is now marked as Completed. Note: Produce received and weighed",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "status": "Completed"
+      },
+      "timestamp": "2026-09-11T09:59:54.848Z"
+    },
+    {
+      "id": "NOTIF-1789120794845-348",
+      "userId": "BUYER-TEST-01",
+      "role": "buyer",
+      "type": "ORDER_UPDATE",
+      "title": "Slot #BK-2026-7262 Update",
+      "message": "Slot #BK-2026-7262 (Basmati Paddy 1121) status changed to Approved.",
+      "category": "orders",
+      "read": false,
+      "link": "buyer",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "status": "Approved"
+      },
+      "timestamp": "2026-09-11T09:59:54.845Z"
+    },
+    {
+      "id": "NOTIF-1789120794844-113",
+      "userId": "FRM-TEST-001",
+      "role": "farmer",
+      "type": "SLOT_APPROVED",
+      "title": "Booking Approved: #BK-2026-7262",
+      "message": "Your booking for 65 quintal Basmati Paddy 1121 is now marked as Approved. Note: APMC Gate verification passed",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "status": "Approved"
+      },
+      "timestamp": "2026-09-11T09:59:54.844Z"
+    },
+    {
+      "id": "NOTIF-1789120794838-551",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "Buyer Request on Slot #BK-2026-7262",
+      "message": "ITC Agrotech Buyer requested to purchase Kisan Balwan Singh's Basmati Paddy 1121 (65 quintal).",
+      "category": "orders",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "buyerId": "BUYER-TEST-01"
+      },
+      "timestamp": "2026-09-11T09:59:54.838Z"
+    },
+    {
+      "id": "NOTIF-1789120794838-629",
+      "userId": "FRM-TEST-001",
+      "role": "farmer",
+      "type": "BUYER_REQUEST",
+      "title": "Buyer Offer: #BK-2026-7262",
+      "message": "ITC Agrotech Buyer submitted a purchase offer of ₹3300/quintal for your 65 quintal Basmati Paddy 1121.",
+      "category": "marketplace",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "buyerId": "BUYER-TEST-01",
+        "offeredPrice": 3300
+      },
+      "timestamp": "2026-09-11T09:59:54.838Z"
+    },
+    {
+      "id": "NOTIF-1789120794817-184",
+      "userId": "APMC-ADMIN",
+      "role": "admin",
+      "type": "ADMIN_ALERT",
+      "title": "New Slot Booking #BK-2026-7262",
+      "message": "Kisan Balwan Singh booked delivery of 65 quintal Basmati Paddy 1121 at Jaitpur Procurement Centre.",
+      "category": "slots",
+      "read": false,
+      "link": "centre",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "token": "A-056"
+      },
+      "timestamp": "2026-09-11T09:59:54.817Z"
+    },
+    {
+      "id": "NOTIF-1789120794815-752",
+      "userId": "FRM-TEST-001",
+      "role": "farmer",
+      "type": "SLOT_PENDING",
+      "title": "Booking Submitted: #BK-2026-7262",
+      "message": "Your booking for 65 quintal of Basmati Paddy 1121 at Jaitpur Procurement Centre is submitted and Pending APMC Mandi review.",
+      "category": "slots",
+      "read": false,
+      "link": "booking",
+      "meta": {
+        "bookingId": "BK-2026-7262",
+        "token": "A-056"
+      },
+      "timestamp": "2026-09-11T09:59:54.815Z"
+    },
     {
       "id": "NOTIF-1789113112809-644",
       "userId": "APMC-ADMIN",

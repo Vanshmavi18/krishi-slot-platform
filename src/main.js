@@ -166,11 +166,16 @@ class AgriQueueApp {
 
       // Fetch farmer procurements, stats & bookings
       if (this.user) {
+        this.bookingsError = null;
         const [procRes, statsRes, bookingsRes, availBookingsRes] = await Promise.all([
           api.getProcurements(this.user.id).catch(() => ({})),
           api.getProcurementStats(this.user.id).catch(() => ({})),
-          api.getMyBookings(this.user.id).catch(() => ({ bookings: [] })),
-          api.getAvailableBookings().catch(() => ({ bookings: [] }))
+          api.getFarmerBookings().catch(err => {
+            console.error('Failed to load farmer bookings:', err);
+            this.bookingsError = err.message || 'Failed to load bookings from database';
+            return { bookings: [] };
+          }),
+          api.getBuyerBookings().catch(() => ({ bookings: [] }))
         ]);
         this.procurements = procRes.procurements || [];
         this.stats = statsRes.stats;
@@ -1302,7 +1307,7 @@ class AgriQueueApp {
 
     switch (this.currentView) {
       case 'dashboard': {
-        const latestBooking = (this.myBookings || []).find(b => b.status === 'CONFIRMED' || b.queueStatus === 'WAITING') || this.myBookings[0] || null;
+        const latestBooking = (this.myBookings || []).find(b => b.status === 'Pending' || b.status === 'Approved' || b.status === 'CONFIRMED' || b.queueStatus === 'WAITING') || this.myBookings[0] || null;
         contentHtml = renderFarmerDashboard({
           user: this.user,
           stats: this.stats,
@@ -1334,6 +1339,7 @@ class AgriQueueApp {
         contentHtml = renderMyBookings({
           user: this.user,
           bookings: this.myBookings,
+          error: this.bookingsError,
           t,
           onNavigate: (view) => {
             this.currentView = view;

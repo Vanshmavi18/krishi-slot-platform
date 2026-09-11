@@ -21,10 +21,15 @@ export function getCrops() {
 }
 
 export function getAvailableSlots(centreId, date) {
-  const bookings = db.filter('bookings', b => b.centreId === centreId && b.date === date && b.status !== 'CANCELLED');
+  const bookings = db.filter('bookings', b => {
+    const st = (b.status || '').toUpperCase();
+    const matchesCentre = !centreId || b.centreId === centreId || (b.location && b.location.includes(centreId));
+    const matchesDate = !date || b.date === date || b.slotDate === date;
+    return matchesCentre && matchesDate && st !== 'CANCELLED' && st !== 'REJECTED';
+  });
   
   return TIME_SLOTS.map(slot => {
-    const bookedForSlot = bookings.filter(b => b.timeSlot === slot.label).length;
+    const bookedForSlot = bookings.filter(b => b.timeSlot === slot.label || b.slotId === slot.id).length;
     const remaining = Math.max(0, slot.maxCapacity - bookedForSlot);
     return {
       ...slot,
