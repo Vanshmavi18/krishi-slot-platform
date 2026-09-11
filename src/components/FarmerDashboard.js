@@ -64,9 +64,19 @@ export function renderFarmerDashboard({ user, stats, latestBooking, myBookings =
 
   return `
     <div class="page-container">
-      <div class="page-header">
-        <h1 class="page-title">${t.dashboard.greeting}, ${user?.name || 'Farmer Friend'}! 👋</h1>
-        <p class="page-subtitle">${t.dashboard.subtitle}</p>
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px">
+        <div>
+          <h1 class="page-title">${t.dashboard.greeting}, ${user?.name || 'Farmer Friend'}! 👋</h1>
+          <p class="page-subtitle">${t.dashboard.subtitle}</p>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button id="dash-top-my-bookings-btn" class="btn-secondary" style="font-weight:700">
+            📋 My Bookings
+          </button>
+          <button id="dash-top-book-btn" class="cta">
+            ＋ Book Slot
+          </button>
+        </div>
       </div>
 
       <!-- Main Dashboard Grid -->
@@ -165,8 +175,13 @@ export function renderFarmerDashboard({ user, stats, latestBooking, myBookings =
       <div class="quick-shortcuts">
         <button id="dash-quick-book" class="shortcut-card">
           <span class="shortcut-icon">＋</span>
-          <b>${t.dashboard.bookSlotBtn}</b>
-          <small>${t.dashboard.bookSlotSub}</small>
+          <b>Book Slot</b>
+          <small>Schedule crop delivery</small>
+        </button>
+        <button id="dash-quick-my-bookings" class="shortcut-card">
+          <span class="shortcut-icon">📋</span>
+          <b>My Bookings</b>
+          <small>Track status & buyer offers</small>
         </button>
         <button id="dash-quick-queue" class="shortcut-card">
           <span class="shortcut-icon">◷</span>
@@ -177,11 +192,6 @@ export function renderFarmerDashboard({ user, stats, latestBooking, myBookings =
           <span class="shortcut-icon">₹</span>
           <b>${t.dashboard.trackPaymentBtn}</b>
           <small>${t.dashboard.trackPaymentSub}</small>
-        </button>
-        <button id="dash-quick-sms" class="shortcut-card">
-          <span class="shortcut-icon">📱</span>
-          <b>${t.dashboard.smsAlertsBtn}</b>
-          <small>${t.dashboard.smsAlertsSub}</small>
         </button>
       </div>
 

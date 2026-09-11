@@ -292,14 +292,61 @@ class ApiService {
   }
 
   async bookSlot(payload) {
-    return this.fetch('/api/slots/book', {
+    return this.fetch('/api/bookings', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // Farmer Slot Booking Endpoints
+  async createBooking(payload) {
+    return this.fetch('/api/bookings', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
   }
 
   async getMyBookings(farmerId) {
-    return this.fetch(`/api/slots/my-bookings?farmerId=${farmerId || ''}`);
+    try {
+      const res = await this.fetch('/api/bookings/my');
+      return res;
+    } catch (err) {
+      // Fallback to legacy endpoint if token is unauthenticated
+      return this.fetch(`/api/slots/my-bookings?farmerId=${farmerId || ''}`);
+    }
+  }
+
+  async getAvailableBookings() {
+    return this.fetch('/api/bookings/available');
+  }
+
+  async getBookingDetails(bookingId) {
+    return this.fetch(`/api/bookings/${bookingId}`);
+  }
+
+  async getAdminBookings() {
+    return this.fetch('/api/bookings/admin');
+  }
+
+  async updateBookingStatus(bookingId, status, notes = '') {
+    return this.fetch(`/api/bookings/${bookingId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, notes })
+    });
+  }
+
+  async requestBuySlot(bookingId, payload = {}) {
+    return this.fetch(`/api/bookings/${bookingId}/buy-request`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  async cancelBooking(bookingId, reason = '') {
+    return this.fetch(`/api/bookings/${bookingId}/cancel`, {
+      method: 'PATCH',
+      body: JSON.stringify({ reason })
+    });
   }
 
   // Queue

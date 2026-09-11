@@ -1,6 +1,6 @@
 // src/components/BuyerDashboard.js
 
-export function renderBuyerDashboard({ user, lots = [], orders = [], t }) {
+export function renderBuyerDashboard({ user, lots = [], orders = [], availableBookings = [], t }) {
   const buyerName = user?.name || 'Vikram Singhania';
   const company = user?.company || 'AgroCorp Foods Pvt Ltd';
   const licenseNo = user?.licenseNo || 'APMC-DL-8821';
@@ -10,6 +10,8 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], t }) {
   const totalVolume = orders.reduce((sum, o) => sum + (Number(o.quantity) || 0), 0);
   const totalSpend = orders.reduce((sum, o) => sum + (Number(o.totalValue) || 0), 0);
   const activeGatePasses = orders.filter(o => o.gatePassId).length;
+
+  const currentBuyerId = user?.id || 'BUYER-01';
 
   return `
     <div class="page-container buyer-view">
@@ -28,10 +30,10 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], t }) {
 
         <div style="display:flex;gap:10px">
           <button id="btn-refresh-market" class="btn-secondary" style="font-weight:700">
-            🔄 Refresh Marketplace
+            🔄 Refresh Slots
           </button>
-          <a href="#marketplace-section" class="cta">
-            🌾 Browse Mandi Lots (${lots.length}) →
+          <a href="#available-farmer-slots-section" class="cta">
+            🌾 Available Farmer Slots (${availableBookings.length}) →
           </a>
         </div>
       </div>
@@ -39,109 +41,135 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], t }) {
       <!-- Commercial Procurement Metrics Grid -->
       <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:28px">
         <div class="stat-card">
-          <span class="label">Procurement Contracts</span>
-          <strong class="value" style="color:#1e40af">${totalOrders}</strong>
-          <span class="sub" style="color:#2563eb">Active APMC Trade Contracts</span>
+          <span class="label">Approved Farmer Slots</span>
+          <strong class="value" style="color:#1e40af">${availableBookings.length}</strong>
+          <span class="sub" style="color:#2563eb">Ready for Commercial Purchase</span>
         </div>
 
         <div class="stat-card">
-          <span class="label">Grain Volume Booked</span>
-          <strong class="value" style="color:#0f766e">${totalVolume} <small style="font-size:14px;color:#6b7280">quintals</small></strong>
-          <span class="sub" style="color:#0d9488">Direct from Registered Farmers</span>
+          <span class="label">Procurement Contracts</span>
+          <strong class="value" style="color:#0f766e">${totalOrders}</strong>
+          <span class="sub" style="color:#0d9488">Active Mandi Orders</span>
         </div>
 
         <div class="stat-card">
           <span class="label">Total Mandi Outlay</span>
           <strong class="value" style="color:#15803d">₹${totalSpend.toLocaleString('en-IN')}</strong>
-          <span class="sub">Guaranteed MSP & Competitive Bids</span>
+          <span class="sub">Guaranteed MSP & Contracts</span>
         </div>
 
         <div class="stat-card">
           <span class="label">Active Gate Passes</span>
           <strong class="value" style="color:#d97706">${activeGatePasses}</strong>
-          <span class="sub" style="color:#b45309">Vehicles authorized for weighbridge</span>
+          <span class="sub" style="color:#b45309">Authorized for weighbridge</span>
         </div>
       </div>
 
-      <!-- SECTION 1: MANDI ARRIVAL MARKETPLACE -->
-      <section id="marketplace-section" style="margin-bottom:36px">
+      <!-- SECTION 1: AVAILABLE FARMER SLOTS / BOOKINGS -->
+      <section id="available-farmer-slots-section" style="margin-bottom:36px">
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
             <div>
               <h2 style="font-size:19px;font-weight:800;color:#0f2e1b">
-                🌾 Live Mandi Arrivals & Farmer Harvest Lots
+                🌾 Available Farmer Slots / Bookings
               </h2>
               <p style="font-size:13px;color:#6b7280">
-                Scheduled farmer deliveries arriving across Gorakhpur Mandi network. Place verified commercial bids.
+                Direct approved farmer delivery slots available for purchase requests. Fair transparent pricing backed by APMC.
               </p>
             </div>
             <div style="display:flex;align-items:center;gap:10px">
               <span class="pill-live" style="background:#dcfce7;color:#15803d;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700">
                 <span class="pulse-dot" style="display:inline-block;margin-right:4px"></span>
-                ${lots.length} Lots Available Today
+                ${availableBookings.length} Approved Slots Available
               </span>
             </div>
           </div>
 
-          <div class="table-container" style="max-height:420px;overflow-y:auto">
+          <div class="table-container" style="max-height:450px;overflow-y:auto">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Token & ID</th>
-                  <th>Crop & Variety</th>
-                  <th>Farmer (Seller)</th>
-                  <th>Mandi Centre</th>
-                  <th>Scheduled Arrival</th>
+                  <th>Booking ID</th>
+                  <th>Crop / Product</th>
                   <th>Quantity</th>
-                  <th>Official MSP</th>
+                  <th>Expected Price</th>
+                  <th>Scheduled Date</th>
+                  <th>Time Slot</th>
+                  <th>Location / Mandi</th>
+                  <th>Farmer (Seller)</th>
+                  <th>Status</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                ${lots.length === 0 ? `
+                ${availableBookings.length === 0 ? `
                   <tr>
-                    <td colspan="8" style="text-align:center;padding:30px;color:#9ca3af">
-                      No arriving lots listed at the moment.
+                    <td colspan="10" style="text-align:center;padding:36px;color:#9ca3af">
+                      No approved farmer slots available right now. Newly approved farmer bookings will appear here instantly.
                     </td>
                   </tr>
-                ` : lots.map(lot => `
-                  <tr>
-                    <td>
-                      <span class="status-pill waiting" style="font-weight:800">#${lot.token || 'A-001'}</span>
-                    </td>
-                    <td>
-                      <b>${lot.cropName}</b>
-                      <div style="font-size:11px;color:#6b7280">${lot.estimatedMoisture || 'FAQ Grade'}</div>
-                    </td>
-                    <td>
-                      <div><b>${lot.farmerName}</b></div>
-                      <small style="color:#9ca3af">ID: ${lot.farmerId}</small>
-                    </td>
-                    <td>
-                      <div>${lot.centreName}</div>
-                    </td>
-                    <td>
-                      <b>${lot.displayDate || lot.arrivalDate}</b>
-                      <div style="font-size:12px;color:#4b5563">${lot.timeSlot}</div>
-                    </td>
-                    <td>
-                      <strong style="color:#0f766e;font-size:15px">${lot.quantity} qtl</strong>
-                    </td>
-                    <td>
-                      <div style="font-weight:700;color:#15803d">₹${(lot.mspRate || 2300).toLocaleString('en-IN')}</div>
-                      <small style="font-size:10px;color:#6b7280">per quintal</small>
-                    </td>
-                    <td>
-                      <button 
-                        class="btn-bid-lot cta" 
-                        style="padding:7px 14px;font-size:12px;box-shadow:none"
-                        data-lot='${JSON.stringify(lot).replace(/'/g, "&apos;")}'
-                      >
-                        ⚡ Place Bid / Buy
-                      </button>
-                    </td>
-                  </tr>
-                `).join('')}
+                ` : availableBookings.map(b => {
+                  const bId = b.bookingId || b.id;
+                  const dateDisplay = b.displayDate || (b.preferredDate ? new Date(b.preferredDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : b.date || 'TBD');
+                  const requests = Array.isArray(b.buyerRequests) ? b.buyerRequests : [];
+                  const alreadyRequested = requests.some(r => r.buyerId === currentBuyerId) || b.hasMyRequest;
+
+                  // Mask farmer phone or last name for buyer privacy where appropriate
+                  const maskedName = b.farmerName || 'Registered Farmer';
+
+                  return `
+                    <tr>
+                      <td>
+                        <strong style="color:#15803d">#${bId}</strong>
+                        ${b.token ? `<div style="font-size:11px;color:#6b7280">Token: #${b.token}</div>` : ''}
+                      </td>
+                      <td>
+                        <b>${b.cropName}</b>
+                      </td>
+                      <td>
+                        <strong style="color:#0f766e;font-size:14px">${b.quantity}</strong>
+                        <span style="font-size:12px;color:#6b7280">${b.quantityUnit || 'quintal'}</span>
+                      </td>
+                      <td>
+                        <div style="font-weight:700;color:#15803d">₹${Number(b.expectedPrice || 2300).toLocaleString('en-IN')}</div>
+                        <small style="font-size:10px;color:#6b7280">per ${b.quantityUnit || 'qtl'}</small>
+                      </td>
+                      <td>
+                        <b>${dateDisplay}</b>
+                      </td>
+                      <td>
+                        <div style="font-size:12px;color:#4b5563">${b.timeSlot}</div>
+                      </td>
+                      <td>
+                        <div>${b.location || b.centreName || 'Jaitpur Mandi'}</div>
+                      </td>
+                      <td>
+                        <div><b>${maskedName}</b></div>
+                        <small style="color:#9ca3af">ID: ${b.farmerId ? b.farmerId.slice(0, 10) + '••' : 'Verified'}</small>
+                      </td>
+                      <td>
+                        <span class="status-pill confirmed" style="background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe">
+                          ${b.status || 'Approved'}
+                        </span>
+                      </td>
+                      <td>
+                        ${alreadyRequested ? `
+                          <button class="btn-secondary btn-sm" disabled style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-weight:700;cursor:default">
+                            ✓ Requested
+                          </button>
+                        ` : `
+                          <button 
+                            class="btn-request-slot cta" 
+                            style="padding:7px 14px;font-size:12px;box-shadow:none"
+                            data-booking='${JSON.stringify(b).replace(/'/g, "&apos;")}'
+                          >
+                            🤝 Request to Buy
+                          </button>
+                        `}
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -180,7 +208,7 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], t }) {
                 ${orders.length === 0 ? `
                   <tr>
                     <td colspan="8" style="text-align:center;padding:30px;color:#9ca3af">
-                      No contracts placed yet. Select a lot above to place your first commercial procurement order!
+                      No contracts placed yet. Select an available farmer slot above to submit your first purchase request!
                     </td>
                   </tr>
                 ` : orders.map(ord => `
@@ -218,46 +246,46 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], t }) {
         </div>
       </section>
 
-      <!-- BID MODAL (Rendered into body or hidden element) -->
-      <div id="buyer-bid-modal" class="modal-backdrop hidden">
+      <!-- REQUEST TO BUY MODAL -->
+      <div id="buyer-request-slot-modal" class="modal-backdrop hidden">
         <div class="modal-window" style="max-width:480px">
-          <button id="btn-close-bid-modal" class="modal-close-btn">✕</button>
+          <button id="btn-close-request-slot-modal" class="modal-close-btn">✕</button>
 
           <div style="text-align:center;margin-bottom:18px">
             <div style="font-size:32px;margin-bottom:6px">🤝</div>
-            <h2 style="font-size:20px;font-weight:800;color:#0f2e1b">Place Commercial Purchase Offer</h2>
-            <p style="font-size:13px;color:#6b7280">Direct APMC Mandi Procurement Contract</p>
+            <h2 style="font-size:20px;font-weight:800;color:#0f2e1b">Request to Buy Farmer Slot</h2>
+            <p style="font-size:13px;color:#6b7280">Direct Mandi APMC Commercial Purchase Offer</p>
           </div>
 
-          <div id="bid-modal-lot-summary" style="background:#f8fafc;border:1px solid #e2e8f0;padding:12px 16px;border-radius:12px;margin-bottom:16px;font-size:13px">
+          <div id="request-modal-slot-summary" style="background:#f8fafc;border:1px solid #e2e8f0;padding:14px 16px;border-radius:12px;margin-bottom:16px;font-size:13px">
             <!-- Populated dynamically -->
           </div>
 
           <div class="form-field">
-            <label>Quantity to Procure (Quintals)</label>
-            <input id="bid-qty-input" type="number" step="1" value="50" min="5" />
+            <label>Offered Price (₹ per unit) <span style="color:#dc2626">*</span></label>
+            <input id="req-offered-price-input" type="number" min="1" step="10" value="2300" required />
+            <small style="color:#059669;font-size:11px;margin-top:4px;display:block">
+              ℹ️ You can offer the farmer's expected price or enter a higher competitive bid.
+            </small>
           </div>
 
           <div class="form-field">
-            <label>Offered Rate per Quintal (₹)</label>
-            <input id="bid-rate-input" type="number" step="10" value="2350" />
-            <small style="color:#059669;font-size:11px;margin-top:4px;display:block">
-              ℹ️ Offer should meet or exceed the official MSP rate for guaranteed acceptance.
-            </small>
+            <label>Buyer Commercial Notes / Terms (Optional)</label>
+            <textarea id="req-buyer-notes-input" rows="2" placeholder="e.g. Immediate payment upon weighment, standard gunny bags required..."></textarea>
           </div>
 
           <div style="background:#ecfdf5;border:1.5px dashed #10b981;border-radius:12px;padding:14px;margin:18px 0">
             <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
-              <span>Estimated Contract Value:</span>
-              <b id="bid-calc-total" style="color:#065f46;font-size:17px">₹1,17,500</b>
+              <span>Estimated Purchase Value:</span>
+              <b id="req-calc-total" style="color:#065f46;font-size:17px">₹0</b>
             </div>
             <div style="font-size:11px;color:#047857">
-              Includes APMC mandi cess, weighment supervision, and instant J-Form generation.
+              Request will be recorded in MongoDB and sent directly to the farmer & APMC administrator.
             </div>
           </div>
 
-          <button id="btn-confirm-buyer-bid" class="cta" style="width:100%;padding:14px">
-            Confirm & Issue Contract Order →
+          <button id="btn-submit-buy-request" class="cta" style="width:100%;padding:14px">
+            Confirm & Send Purchase Request →
           </button>
         </div>
       </div>

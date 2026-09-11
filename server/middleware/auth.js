@@ -2,7 +2,7 @@
 import jwt from 'jsonwebtoken';
 import { db } from '../data/db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'krishi_slot_secret_key_2026_sih';
+const JWT_SECRET = process.env.JWT_SECRET || 'agriqueue_secret_key_2026_sih';
 
 export function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;

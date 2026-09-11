@@ -14,6 +14,8 @@ import { renderBuyerDashboard } from './components/BuyerDashboard.js';
 import { NotificationCenter } from './components/NotificationCenter.js';
 import { AuthModal } from './components/AuthModal.js';
 import { ReceiptModal } from './components/ReceiptModal.js';
+import { renderMyBookings } from './components/MyBookings.js';
+import { renderAdminSlotManagement } from './components/AdminSlotManagement.js';
 
 class AgriQueueApp {
   constructor() {
@@ -38,16 +40,24 @@ class AgriQueueApp {
     this.bookingState = {
       centreId: 'CTR-UP-01',
       cropId: 'paddy_comm',
+      cropName: 'Paddy / धान (Common)',
       quantity: 42,
+      quantityUnit: 'quintal',
+      expectedPrice: 2300,
       vehicle: 'Tractor Trolley',
       date: '2026-09-12',
-      timeSlot: '10:30 – 11:00 AM'
+      preferredDate: '2026-09-12',
+      timeSlot: '10:30 – 11:00 AM',
+      location: 'Jaitpur Procurement Centre',
+      notes: ''
     };
 
     this.centres = [];
     this.crops = [];
     this.availableSlots = [];
     this.myBookings = [];
+    this.adminBookings = [];
+    this.availableBookings = [];
     this.procurements = [];
     this.stats = null;
     this.queueStatus = null;
@@ -57,6 +67,11 @@ class AgriQueueApp {
     this.buyerLots = [];
     this.buyerOrders = [];
     this.activeBiddingLot = null;
+    this.activeRequestSlot = null;
+
+    // Slot system state
+    this.activeCancelBookingId = null;
+    this.activeAdminAction = null;
 
     // Notifications state
     this.notifications = [];
@@ -151,14 +166,25 @@ class AgriQueueApp {
 
       // Fetch farmer procurements, stats & bookings
       if (this.user) {
-        const [procRes, statsRes, bookingsRes] = await Promise.all([
-          api.getProcurements(this.user.id),
-          api.getProcurementStats(this.user.id),
-          api.getMyBookings(this.user.id)
+        const [procRes, statsRes, bookingsRes, availBookingsRes] = await Promise.all([
+          api.getProcurements(this.user.id).catch(() => ({})),
+          api.getProcurementStats(this.user.id).catch(() => ({})),
+          api.getMyBookings(this.user.id).catch(() => ({ bookings: [] })),
+          api.getAvailableBookings().catch(() => ({ bookings: [] }))
         ]);
         this.procurements = procRes.procurements || [];
         this.stats = statsRes.stats;
         this.myBookings = bookingsRes.bookings || [];
+        this.availableBookings = availBookingsRes.bookings || [];
+
+        // Fetch Admin bookings if admin or officer
+        const userRole = (this.user.role || '').toLowerCase();
+        if (userRole === 'admin' || userRole === 'officer') {
+          const adminBookingsRes = await api.getAdminBookings().catch(() => ({ bookings: [] }));
+          this.adminBookings = adminBookingsRes.bookings || [];
+        } else {
+          this.adminBookings = [];
+        }
 
         // Fetch notifications
         const notifRes = await api.getNotifications(this.user.id, this.user.role);
@@ -171,6 +197,8 @@ class AgriQueueApp {
         this.procurements = [];
         this.stats = null;
         this.myBookings = [];
+        this.adminBookings = [];
+        this.availableBookings = [];
       }
 
       // Fetch centre tokens
@@ -474,6 +502,8 @@ class AgriQueueApp {
       this.user = null;
       this.currentView = 'landing';
       this.myBookings = [];
+      this.adminBookings = [];
+      this.availableBookings = [];
       this.procurements = [];
       this.stats = null;
       this.showToast('You have been logged out successfully.');
@@ -508,75 +538,597 @@ class AgriQueueApp {
       });
     });
 
-    // Dashboard shortcuts
-    document.getElementById('dash-hero-book-btn')?.addEventListener('click', () => {
-      this.currentView = 'booking';
+    // Dashboard & Navigation shortcuts
+    const navigateTo = (view) => {
+      this.currentView = view;
       this.render();
-    });
-    document.getElementById('dash-open-queue')?.addEventListener('click', () => {
-      this.currentView = 'queue';
-      this.render();
-    });
-    document.getElementById('dash-quick-book')?.addEventListener('click', () => {
-      this.currentView = 'booking';
-      this.render();
-    });
-    document.getElementById('dash-quick-queue')?.addEventListener('click', () => {
-      this.currentView = 'queue';
-      this.render();
-    });
-    document.getElementById('dash-quick-pay')?.addEventListener('click', () => {
-      this.currentView = 'procurements';
-      this.render();
-    });
-    document.getElementById('dash-quick-sms')?.addEventListener('click', () => {
-      this.notificationCenter.toggle(true);
-    });
-    document.getElementById('dash-view-all-history')?.addEventListener('click', () => {
-      this.currentView = 'procurements';
-      this.render();
+    };
+
+    document.getElementById('dash-hero-book-btn')?.addEventListener('click', () => navigateTo('booking'));
+    document.getElementById('dash-top-book-btn')?.addEventListener('click', () => navigateTo('booking'));
+    document.getElementById('dash-quick-book')?.addEventListener('click', () => navigateTo('booking'));
+    document.getElementById('btn-nav-book-slot')?.addEventListener('click', () => navigateTo('booking'));
+    document.getElementById('empty-btn-book-slot')?.addEventListener('click', () => navigateTo('booking'));
+
+    document.getElementById('dash-top-my-bookings-btn')?.addEventListener('click', () => navigateTo('my-bookings'));
+    document.getElementById('dash-quick-my-bookings')?.addEventListener('click', () => navigateTo('my-bookings'));
+    document.getElementById('btn-view-my-bookings-shortcut')?.addEventListener('click', () => navigateTo('my-bookings'));
+
+    document.getElementById('dash-open-queue')?.addEventListener('click', () => navigateTo('queue'));
+    document.getElementById('dash-quick-queue')?.addEventListener('click', () => navigateTo('queue'));
+    document.getElementById('dash-quick-pay')?.addEventListener('click', () => navigateTo('procurements'));
+    document.getElementById('dash-quick-sms')?.addEventListener('click', () => this.notificationCenter.toggle(true));
+    document.getElementById('dash-view-all-history')?.addEventListener('click', () => navigateTo('procurements'));
+
+    // --- FARMER BOOKING FORM CONTROLS & LIVE CALCULATION ---
+    const cropInp = document.getElementById('book-crop-input');
+    const cropQuickSel = document.getElementById('book-crop-quick-select');
+    const qtyInp = document.getElementById('book-qty-input');
+    const unitSel = document.getElementById('book-unit-select');
+    const priceInp = document.getElementById('book-price-input');
+    const locationSel = document.getElementById('book-location-select');
+    const customLocationInp = document.getElementById('book-custom-location');
+    const customDateInp = document.getElementById('book-custom-date');
+    const notesInp = document.getElementById('book-notes-input');
+
+    const updateBookingSummary = () => {
+      const crop = cropInp?.value || 'Paddy';
+      const qty = parseFloat(qtyInp?.value) || 0;
+      const unit = unitSel?.value || 'quintal';
+      const price = parseFloat(priceInp?.value) || 0;
+      const date = customDateInp?.value || this.bookingState.date || '2026-09-12';
+      const slot = this.bookingState.timeSlot || '10:30 – 11:00 AM';
+      const loc = locationSel?.value === 'Custom Mandi / Other Location'
+        ? (customLocationInp?.value || 'Custom Location')
+        : (locationSel?.value || 'Jaitpur Mandi');
+      const payout = Math.round(qty * price);
+
+      const sumCrop = document.getElementById('sum-crop-name');
+      const sumQty = document.getElementById('sum-qty');
+      const sumPrice = document.getElementById('sum-price');
+      const sumDate = document.getElementById('sum-date');
+      const sumSlot = document.getElementById('sum-slot');
+      const sumMandi = document.getElementById('sum-mandi');
+      const sumPayout = document.getElementById('sum-total-payout');
+
+      if (sumCrop) sumCrop.innerText = crop;
+      if (sumQty) sumQty.innerText = `${qty} ${unit}`;
+      if (sumPrice) sumPrice.innerText = `₹${price.toLocaleString('en-IN')} / ${unit}`;
+      if (sumDate) sumDate.innerText = date;
+      if (sumSlot) sumSlot.innerText = slot;
+      if (sumMandi) sumMandi.innerText = loc;
+      if (sumPayout) sumPayout.innerText = `₹${payout.toLocaleString('en-IN')}`;
+    };
+
+    cropQuickSel?.addEventListener('change', (e) => {
+      const selOpt = e.target.selectedOptions?.[0];
+      if (selOpt && selOpt.value) {
+        if (cropInp) cropInp.value = selOpt.value;
+        const rate = selOpt.getAttribute('data-rate');
+        if (rate && priceInp) priceInp.value = rate;
+        updateBookingSummary();
+      }
     });
 
-    // Booking form controls
-    document.getElementById('book-centre-select')?.addEventListener('change', async (e) => {
-      this.bookingState.centreId = e.target.value;
-      const slots = await api.getAvailability(this.bookingState.centreId, this.bookingState.date);
-      this.availableSlots = slots.slots || [];
-      this.render();
+    locationSel?.addEventListener('change', (e) => {
+      if (e.target.value === 'Custom Mandi / Other Location') {
+        customLocationInp?.classList.remove('hidden');
+        customLocationInp?.focus();
+      } else {
+        customLocationInp?.classList.add('hidden');
+      }
+      updateBookingSummary();
     });
 
-    document.getElementById('book-crop-select')?.addEventListener('change', (e) => {
-      this.bookingState.cropId = e.target.value;
-      this.render();
-    });
-
-    document.getElementById('book-qty-input')?.addEventListener('input', (e) => {
-      this.bookingState.quantity = e.target.value;
-      this.render();
-    });
-
-    document.getElementById('book-vehicle-select')?.addEventListener('change', (e) => {
-      this.bookingState.vehicle = e.target.value;
+    cropInp?.addEventListener('input', updateBookingSummary);
+    qtyInp?.addEventListener('input', updateBookingSummary);
+    unitSel?.addEventListener('change', updateBookingSummary);
+    priceInp?.addEventListener('input', updateBookingSummary);
+    customLocationInp?.addEventListener('input', updateBookingSummary);
+    customDateInp?.addEventListener('change', (e) => {
+      this.bookingState.date = e.target.value;
+      updateBookingSummary();
     });
 
     document.querySelectorAll('.date-choice').forEach(el => {
       el.addEventListener('click', async () => {
-        this.bookingState.date = el.getAttribute('data-date');
-        const slots = await api.getAvailability(this.bookingState.centreId, this.bookingState.date);
-        this.availableSlots = slots.slots || [];
-        this.render();
+        document.querySelectorAll('.date-choice').forEach(d => d.classList.remove('selected'));
+        el.classList.add('selected');
+        const dt = el.getAttribute('data-date');
+        this.bookingState.date = dt;
+        if (customDateInp) customDateInp.value = dt;
+        updateBookingSummary();
       });
     });
 
     document.querySelectorAll('.time-choice').forEach(el => {
       el.addEventListener('click', () => {
+        document.querySelectorAll('.time-choice').forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
         this.bookingState.timeSlot = el.getAttribute('data-slot');
-        this.render();
+        updateBookingSummary();
       });
     });
 
-    document.getElementById('btn-confirm-slot-booking')?.addEventListener('click', () => {
-      this.handleSlotBooking();
+    // Submit Booking handler (Farmer)
+    const handleFarmerBookingSubmit = async () => {
+      const errBox = document.getElementById('booking-form-error');
+      const submitBtn = document.getElementById('btn-submit-farmer-booking') || document.getElementById('btn-confirm-slot-booking');
+
+      const cropName = cropInp?.value?.trim();
+      const quantity = parseFloat(qtyInp?.value);
+      const quantityUnit = unitSel?.value || 'quintal';
+      const expectedPrice = parseFloat(priceInp?.value);
+      const preferredDate = customDateInp?.value || this.bookingState.date || '2026-09-12';
+      const timeSlot = this.bookingState.timeSlot || '10:30 – 11:00 AM';
+      const location = locationSel?.value === 'Custom Mandi / Other Location'
+        ? customLocationInp?.value?.trim()
+        : locationSel?.value?.trim();
+      const vehicle = document.getElementById('book-vehicle-select')?.value || 'Tractor Trolley';
+      const notes = notesInp?.value?.trim() || '';
+
+      // Validation
+      if (!cropName) {
+        if (errBox) {
+          errBox.innerText = '⚠️ Please enter or select a Crop/Product name.';
+          errBox.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (isNaN(quantity) || quantity <= 0) {
+        if (errBox) {
+          errBox.innerText = '⚠️ Please enter a valid quantity greater than 0.';
+          errBox.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (isNaN(expectedPrice) || expectedPrice <= 0) {
+        if (errBox) {
+          errBox.innerText = '⚠️ Please enter a valid expected selling price.';
+          errBox.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (!preferredDate) {
+        if (errBox) {
+          errBox.innerText = '⚠️ Please choose a preferred delivery date.';
+          errBox.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (!location) {
+        if (errBox) {
+          errBox.innerText = '⚠️ Please specify a delivery Mandi or location.';
+          errBox.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (errBox) errBox.classList.add('hidden');
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = '⏳ Submitting to APMC Mandi...';
+      }
+
+      try {
+        const res = await api.createBooking({
+          cropName,
+          quantity,
+          quantityUnit,
+          expectedPrice,
+          preferredDate,
+          timeSlot,
+          location,
+          vehicle,
+          notes
+        });
+
+        this.showToast(`🎉 Booking #${res.bookingId} submitted successfully! Status: Pending APMC Review.`);
+        await this.refreshData();
+        this.currentView = 'my-bookings';
+        this.render();
+      } catch (err) {
+        if (errBox) {
+          errBox.innerText = `⚠️ Booking failed: ${err.message}`;
+          errBox.classList.remove('hidden');
+        }
+        this.showToast(`⚠️ Booking failed: ${err.message}`);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = '🚀 Submit Booking →';
+        }
+      }
+    };
+
+    document.getElementById('btn-submit-farmer-booking')?.addEventListener('click', handleFarmerBookingSubmit);
+    document.getElementById('btn-confirm-slot-booking')?.addEventListener('click', handleFarmerBookingSubmit);
+
+    // --- FARMER: MY BOOKINGS SECTION EVENTS ---
+    document.getElementById('btn-refresh-my-bookings')?.addEventListener('click', async () => {
+      await this.refreshData();
+      this.render();
+      this.showToast('Bookings refreshed from database.');
+    });
+
+    document.getElementById('filter-my-bookings-status')?.addEventListener('change', (e) => {
+      const val = e.target.value;
+      const rows = document.querySelectorAll('#my-bookings-table-body tr');
+      rows.forEach(tr => {
+        const st = tr.getAttribute('data-status');
+        if (val === 'ALL' || st === val || (val === 'Approved' && st === 'CONFIRMED')) {
+          tr.style.display = '';
+        } else {
+          tr.style.display = 'none';
+        }
+      });
+    });
+
+    // View Details Modal (Farmer)
+    document.querySelectorAll('.btn-view-booking-details').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try {
+          const b = JSON.parse(btn.getAttribute('data-booking'));
+          const modal = document.getElementById('booking-details-modal');
+          const idEl = document.getElementById('modal-booking-id');
+          const content = document.getElementById('modal-booking-content');
+
+          if (!modal) return;
+          if (idEl) idEl.innerText = `Booking Details #${b.bookingId || b.id}`;
+
+          const requests = Array.isArray(b.buyerRequests) ? b.buyerRequests : [];
+          const dateDisplay = b.displayDate || (b.preferredDate ? new Date(b.preferredDate).toLocaleDateString() : b.date || 'TBD');
+
+          if (content) {
+            content.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;background:#f8fafc;padding:10px 14px;border-radius:10px;border:1px solid #e2e8f0">
+                <span>Current Status:</span>
+                <b>${b.status}</b>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;line-height:1.6;margin-bottom:14px">
+                <div><span style="color:#64748b">Farmer Name:</span><br><b>${b.farmerName}</b></div>
+                <div><span style="color:#64748b">Farmer ID:</span><br><b>${b.farmerId}</b></div>
+                <div><span style="color:#64748b">Crop / Variety:</span><br><b>${b.cropName}</b></div>
+                <div><span style="color:#64748b">Quantity:</span><br><b>${b.quantity} ${b.quantityUnit || 'quintal'}</b></div>
+                <div><span style="color:#64748b">Expected Selling Price:</span><br><b>₹${Number(b.expectedPrice || 0).toLocaleString('en-IN')} / ${b.quantityUnit || 'qtl'}</b></div>
+                <div><span style="color:#64748b">Total Estimated:</span><br><b style="color:#15803d">₹${Math.round(Number(b.quantity || 0) * Number(b.expectedPrice || 0)).toLocaleString('en-IN')}</b></div>
+                <div><span style="color:#64748b">Scheduled Date:</span><br><b>${dateDisplay}</b></div>
+                <div><span style="color:#64748b">Time Slot:</span><br><b>${b.timeSlot}</b></div>
+                <div style="grid-column:span 2"><span style="color:#64748b">Procurement Mandi:</span><br><b>${b.location || b.centreName || 'Gorakhpur APMC'}</b></div>
+              </div>
+
+              ${b.notes ? `
+                <div style="background:#fffbeb;border:1px solid #fef3c7;padding:10px 12px;border-radius:8px;font-size:12.5px;color:#92400e;margin-bottom:14px">
+                  <b>Farmer Notes:</b> ${b.notes}
+                </div>
+              ` : ''}
+
+              ${requests.length > 0 ? `
+                <div style="border-top:1px solid #e2e8f0;padding-top:12px;margin-top:12px">
+                  <h4 style="font-size:14px;font-weight:700;margin-bottom:8px;color:#1e40af">Commercial Buyer Purchase Offers (${requests.length})</h4>
+                  ${requests.map(r => `
+                    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12.5px">
+                      <div style="display:flex;justify-content:space-between">
+                        <b>${r.buyerName || 'Commercial Buyer'}</b>
+                        <b style="color:#1e40af">Offered: ₹${r.offeredPrice || b.expectedPrice}/${b.quantityUnit || 'qtl'}</b>
+                      </div>
+                      ${r.notes ? `<div style="color:#475569;margin-top:2px;font-size:11.5px">Note: ${r.notes}</div>` : ''}
+                      <small style="color:#94a3b8;font-size:11px">${new Date(r.requestedAt || Date.now()).toLocaleString()}</small>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            `;
+          }
+
+          modal.classList.remove('hidden');
+        } catch (e) {
+          console.error('Error opening booking details:', e);
+        }
+      });
+    });
+
+    document.getElementById('btn-close-booking-details')?.addEventListener('click', () => {
+      document.getElementById('booking-details-modal')?.classList.add('hidden');
+    });
+    document.getElementById('btn-modal-close-action')?.addEventListener('click', () => {
+      document.getElementById('booking-details-modal')?.classList.add('hidden');
+    });
+
+    // Cancellation Modal (Farmer)
+    document.querySelectorAll('.btn-cancel-booking').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const crop = btn.getAttribute('data-crop');
+        this.activeCancelBookingId = id;
+
+        const modal = document.getElementById('cancel-confirm-modal');
+        const textEl = document.getElementById('cancel-confirm-text');
+        if (textEl) {
+          textEl.innerText = `Are you sure you want to cancel booking #${id} for ${crop}? This will release your reserved slot.`;
+        }
+        modal?.classList.remove('hidden');
+      });
+    });
+
+    document.getElementById('btn-cancel-modal-dismiss')?.addEventListener('click', () => {
+      document.getElementById('cancel-confirm-modal')?.classList.add('hidden');
+      this.activeCancelBookingId = null;
+    });
+
+    document.getElementById('btn-confirm-cancel-action')?.addEventListener('click', async () => {
+      if (!this.activeCancelBookingId) return;
+      const reason = document.getElementById('cancel-reason-input')?.value;
+
+      try {
+        await api.cancelBooking(this.activeCancelBookingId, reason);
+        document.getElementById('cancel-confirm-modal')?.classList.add('hidden');
+        this.showToast(`✓ Booking #${this.activeCancelBookingId} cancelled.`);
+        this.activeCancelBookingId = null;
+        await this.refreshData();
+        this.render();
+      } catch (err) {
+        this.showToast(`Cancellation error: ${err.message}`);
+      }
+    });
+
+    // --- BUYER: AVAILABLE FARMER SLOTS & REQUEST TO BUY ---
+    document.querySelectorAll('.btn-request-slot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try {
+          const booking = JSON.parse(btn.getAttribute('data-booking'));
+          this.activeRequestSlot = booking;
+
+          const modal = document.getElementById('buyer-request-slot-modal');
+          const summary = document.getElementById('request-modal-slot-summary');
+          const priceInput = document.getElementById('req-offered-price-input');
+          const calcTotal = document.getElementById('req-calc-total');
+
+          if (!modal) return;
+
+          const dateDisplay = booking.displayDate || (booking.preferredDate ? new Date(booking.preferredDate).toLocaleDateString() : booking.date || 'TBD');
+
+          if (summary) {
+            summary.innerHTML = `
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <b>${booking.cropName}</b>
+                <span class="status-pill confirmed">Slot #${booking.bookingId || booking.id}</span>
+              </div>
+              <div style="color:#4b5563">
+                Farmer: <b>${booking.farmerName}</b> • Location: <b>${booking.location || booking.centreName}</b>
+              </div>
+              <div style="color:#4b5563;margin-top:4px">
+                Available: <b>${booking.quantity} ${booking.quantityUnit || 'quintal'}</b> • Expected Rate: <b>₹${Number(booking.expectedPrice).toLocaleString('en-IN')}/${booking.quantityUnit || 'qtl'}</b>
+              </div>
+              <div style="color:#64748b;font-size:12px;margin-top:2px">
+                Arrival: <b>${dateDisplay} (${booking.timeSlot})</b>
+              </div>
+            `;
+          }
+
+          if (priceInput) priceInput.value = booking.expectedPrice || 2300;
+
+          const updateReqTotal = () => {
+            const pr = parseFloat(priceInput?.value) || 0;
+            const tot = Math.round((Number(booking.quantity) || 0) * pr);
+            if (calcTotal) calcTotal.innerText = `₹${tot.toLocaleString('en-IN')}`;
+          };
+
+          priceInput?.removeEventListener('input', updateReqTotal);
+          priceInput?.addEventListener('input', updateReqTotal);
+          updateReqTotal();
+
+          modal.classList.remove('hidden');
+        } catch (e) {
+          console.error('Error opening request modal:', e);
+        }
+      });
+    });
+
+    document.getElementById('btn-close-request-slot-modal')?.addEventListener('click', () => {
+      document.getElementById('buyer-request-slot-modal')?.classList.add('hidden');
+      this.activeRequestSlot = null;
+    });
+
+    document.getElementById('btn-submit-buy-request')?.addEventListener('click', async () => {
+      if (!this.activeRequestSlot) return;
+
+      const price = parseFloat(document.getElementById('req-offered-price-input')?.value);
+      const notes = document.getElementById('req-buyer-notes-input')?.value;
+
+      try {
+        const id = this.activeRequestSlot.bookingId || this.activeRequestSlot.id;
+        await api.requestBuySlot(id, { offeredPrice: price, notes });
+
+        document.getElementById('buyer-request-slot-modal')?.classList.add('hidden');
+        this.showToast(`🤝 Purchase request submitted for Slot #${id}! Farmer & APMC Admin notified.`);
+        this.activeRequestSlot = null;
+        await this.refreshData();
+        this.render();
+      } catch (err) {
+        this.showToast(`Request failed: ${err.message}`);
+      }
+    });
+
+    // --- ADMIN: SLOT MANAGEMENT EVENTS ---
+    document.getElementById('btn-refresh-admin-slots')?.addEventListener('click', async () => {
+      await this.refreshData();
+      this.render();
+      this.showToast('Admin slots refreshed from MongoDB.');
+    });
+
+    const filterAdminTable = () => {
+      const q = (document.getElementById('search-admin-slots')?.value || '').toLowerCase().trim();
+      const statusFilter = document.getElementById('filter-admin-slots-status')?.value || 'ALL';
+      const rows = document.querySelectorAll('#admin-slots-table-body tr');
+
+      rows.forEach(tr => {
+        const rowStatus = tr.getAttribute('data-status');
+        const rowSearch = tr.getAttribute('data-search') || '';
+
+        const matchesStatus = statusFilter === 'ALL' || rowStatus === statusFilter || (statusFilter === 'Approved' && rowStatus === 'CONFIRMED');
+        const matchesSearch = !q || rowSearch.includes(q);
+
+        if (matchesStatus && matchesSearch) {
+          tr.style.display = '';
+        } else {
+          tr.style.display = 'none';
+        }
+      });
+    };
+
+    document.getElementById('search-admin-slots')?.addEventListener('input', filterAdminTable);
+    document.getElementById('filter-admin-slots-status')?.addEventListener('change', filterAdminTable);
+
+    // Admin View Booking Modal
+    document.querySelectorAll('.btn-admin-view-booking').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try {
+          const b = JSON.parse(btn.getAttribute('data-booking'));
+          const modal = document.getElementById('admin-view-booking-modal');
+          const idEl = document.getElementById('admin-view-modal-id');
+          const bodyEl = document.getElementById('admin-view-modal-body');
+
+          if (!modal) return;
+          if (idEl) idEl.innerText = `APMC Mandi Slot Record #${b.bookingId || b.id}`;
+
+          const requests = Array.isArray(b.buyerRequests) ? b.buyerRequests : [];
+          const dateDisplay = b.displayDate || (b.preferredDate ? new Date(b.preferredDate).toLocaleDateString() : b.date || 'TBD');
+
+          if (bodyEl) {
+            bodyEl.innerHTML = `
+              <div style="background:#f8fafc;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:14px;display:flex;justify-content:space-between">
+                <span>Current Status:</span>
+                <b>${b.status}</b>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;line-height:1.6;margin-bottom:14px">
+                <div><span style="color:#64748b">Farmer Name:</span><br><b>${b.farmerName}</b></div>
+                <div><span style="color:#64748b">Farmer ID:</span><br><b>${b.farmerId}</b></div>
+                <div><span style="color:#64748b">Farmer Phone:</span><br><b>${b.farmerPhone || 'N/A'}</b></div>
+                <div><span style="color:#64748b">Farmer Email:</span><br><b>${b.farmerEmail || 'N/A'}</b></div>
+                <div><span style="color:#64748b">Crop / Variety:</span><br><b>${b.cropName}</b></div>
+                <div><span style="color:#64748b">Quantity:</span><br><b>${b.quantity} ${b.quantityUnit || 'quintal'}</b></div>
+                <div><span style="color:#64748b">Expected Rate:</span><br><b>₹${Number(b.expectedPrice || 0).toLocaleString('en-IN')}/${b.quantityUnit || 'qtl'}</b></div>
+                <div><span style="color:#64748b">Total Value:</span><br><b style="color:#15803d">₹${Math.round(Number(b.quantity || 0) * Number(b.expectedPrice || 0)).toLocaleString('en-IN')}</b></div>
+                <div><span style="color:#64748b">Arrival Date:</span><br><b>${dateDisplay}</b></div>
+                <div><span style="color:#64748b">Time Window:</span><br><b>${b.timeSlot}</b></div>
+                <div><span style="color:#64748b">Assigned Mandi:</span><br><b>${b.location || b.centreName || 'Gorakhpur Mandi'}</b></div>
+                <div><span style="color:#64748b">Gate Token:</span><br><b>#${b.token || 'N/A'}</b></div>
+              </div>
+
+              ${b.notes ? `
+                <div style="background:#fffbeb;border:1px solid #fef3c7;padding:10px;border-radius:8px;font-size:12px;color:#92400e;margin-bottom:12px">
+                  <b>Farmer Notes:</b> ${b.notes}
+                </div>
+              ` : ''}
+
+              ${requests.length > 0 ? `
+                <div style="border-top:1px solid #e2e8f0;padding-top:10px;margin-top:10px">
+                  <h4 style="font-size:13.5px;font-weight:700;margin-bottom:8px;color:#1e40af">Buyer Purchase Requests (${requests.length})</h4>
+                  ${requests.map(r => `
+                    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px">
+                      <div style="display:flex;justify-content:space-between">
+                        <b>${r.buyerName}</b>
+                        <b style="color:#1e40af">Offer: ₹${r.offeredPrice}/${b.quantityUnit || 'qtl'}</b>
+                      </div>
+                      ${r.notes ? `<div style="color:#475569;margin-top:2px">Note: ${r.notes}</div>` : ''}
+                      <small style="color:#94a3b8">${new Date(r.requestedAt || Date.now()).toLocaleString()}</small>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : `
+                <div style="font-size:12px;color:#94a3af;font-style:italic">No buyer commercial purchase requests submitted yet.</div>
+              `}
+            `;
+          }
+
+          modal.classList.remove('hidden');
+        } catch (e) {
+          console.error('Admin view booking error:', e);
+        }
+      });
+    });
+
+    document.getElementById('btn-close-admin-view-modal')?.addEventListener('click', () => {
+      document.getElementById('admin-view-booking-modal')?.classList.add('hidden');
+    });
+    document.getElementById('btn-admin-view-modal-close')?.addEventListener('click', () => {
+      document.getElementById('admin-view-booking-modal')?.classList.add('hidden');
+    });
+
+    // Admin Status Change Trigger
+    document.querySelectorAll('.btn-admin-status-trigger').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const target = btn.getAttribute('data-target');
+        const crop = btn.getAttribute('data-crop');
+        const farmer = btn.getAttribute('data-farmer');
+
+        this.activeAdminAction = { id, targetStatus: target };
+
+        const modal = document.getElementById('admin-status-modal');
+        const titleEl = document.getElementById('admin-modal-title');
+        const descEl = document.getElementById('admin-modal-desc');
+        const iconEl = document.getElementById('admin-modal-icon');
+        const detailsEl = document.getElementById('admin-modal-details-box');
+        const confirmBtn = document.getElementById('btn-admin-modal-confirm');
+
+        if (!modal) return;
+
+        if (titleEl) titleEl.innerText = `Confirm Booking ${target}`;
+        if (descEl) descEl.innerText = `Are you sure you want to mark this booking as ${target}?`;
+
+        if (iconEl) {
+          iconEl.innerText = target === 'Approved' ? '✅' : target === 'Rejected' ? '✕' : target === 'Completed' ? '🎉' : '⚠️';
+        }
+
+        if (detailsEl) {
+          detailsEl.innerHTML = `
+            <div>Booking ID: <b>#${id}</b></div>
+            <div>Farmer: <b>${farmer}</b> • Crop: <b>${crop}</b></div>
+            <div>New State: <b style="color:${target === 'Approved' ? '#15803d' : target === 'Rejected' ? '#b91c1c' : '#0284c7'}">${target}</b></div>
+          `;
+        }
+
+        if (confirmBtn) {
+          confirmBtn.style.background = target === 'Rejected' || target === 'Cancelled' ? '#dc2626' : '#15803d';
+          confirmBtn.innerText = `Confirm ${target} →`;
+        }
+
+        modal.classList.remove('hidden');
+      });
+    });
+
+    document.getElementById('btn-close-admin-status-modal')?.addEventListener('click', () => {
+      document.getElementById('admin-status-modal')?.classList.add('hidden');
+      this.activeAdminAction = null;
+    });
+    document.getElementById('btn-admin-modal-dismiss')?.addEventListener('click', () => {
+      document.getElementById('admin-status-modal')?.classList.add('hidden');
+      this.activeAdminAction = null;
+    });
+
+    document.getElementById('btn-admin-modal-confirm')?.addEventListener('click', async () => {
+      if (!this.activeAdminAction) return;
+
+      const notes = document.getElementById('admin-status-notes-input')?.value;
+
+      try {
+        await api.updateBookingStatus(this.activeAdminAction.id, this.activeAdminAction.targetStatus, notes);
+        document.getElementById('admin-status-modal')?.classList.add('hidden');
+        this.showToast(`✓ Booking #${this.activeAdminAction.id} marked as ${this.activeAdminAction.targetStatus}!`);
+        this.activeAdminAction = null;
+        await this.refreshData();
+        this.render();
+      } catch (err) {
+        this.showToast(`Status update failed: ${err.message}`);
+      }
     });
 
     // Queue actions
@@ -769,6 +1321,7 @@ class AgriQueueApp {
 
       case 'booking':
         contentHtml = renderSlotBooking({
+          user: this.user,
           centres: this.centres,
           crops: this.crops,
           availableSlots: this.availableSlots,
@@ -777,8 +1330,28 @@ class AgriQueueApp {
         });
         break;
 
+      case 'my-bookings':
+        contentHtml = renderMyBookings({
+          user: this.user,
+          bookings: this.myBookings,
+          t,
+          onNavigate: (view) => {
+            this.currentView = view;
+            this.render();
+          }
+        });
+        break;
+
+      case 'admin-slots':
+        contentHtml = renderAdminSlotManagement({
+          user: this.user,
+          bookings: this.adminBookings,
+          t
+        });
+        break;
+
       case 'queue': {
-        const activeBooking = (this.myBookings || []).find(b => b.status === 'CONFIRMED' || b.queueStatus === 'WAITING') || this.myBookings[0] || null;
+        const activeBooking = (this.myBookings || []).find(b => b.status === 'CONFIRMED' || b.status === 'Approved' || b.queueStatus === 'WAITING') || this.myBookings[0] || null;
         contentHtml = renderLiveQueue({
           queueStatus: this.queueStatus,
           userToken: activeBooking ? activeBooking.token : null,
@@ -820,6 +1393,7 @@ class AgriQueueApp {
           user: this.user,
           lots: this.buyerLots,
           orders: this.buyerOrders,
+          availableBookings: this.availableBookings,
           t
         });
         break;

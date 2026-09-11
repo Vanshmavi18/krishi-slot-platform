@@ -36,7 +36,11 @@ export function renderSidebar({ currentView, user, t }) {
             </button>
             <button class="nav-link ${currentView === 'booking' ? 'active' : ''}" data-view="booking">
               <i>📅</i>
-              <span>${t.nav.booking}</span>
+              <span>Book Slot</span>
+            </button>
+            <button class="nav-link ${currentView === 'my-bookings' ? 'active' : ''}" data-view="my-bookings">
+              <i>📋</i>
+              <span>My Bookings</span>
             </button>
             <button class="nav-link ${currentView === 'queue' ? 'active' : ''}" data-view="queue">
               <i>⏱️</i>
@@ -57,6 +61,10 @@ export function renderSidebar({ currentView, user, t }) {
               <i>🏢</i>
               <span>Mandi Operations</span>
               <span class="badge-count">Live</span>
+            </button>
+            <button class="nav-link ${currentView === 'admin-slots' ? 'active' : ''}" data-view="admin-slots">
+              <i>📋</i>
+              <span>Slot Management</span>
             </button>
             <button class="nav-link ${currentView === 'queue' ? 'active' : ''}" data-view="queue">
               <i>⏱️</i>

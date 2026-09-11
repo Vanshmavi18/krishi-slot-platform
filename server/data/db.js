@@ -203,9 +203,14 @@ class Database {
         this.saveLocal();
 
         // Async update in MongoDB if connected
-        if (this.isMongoConnected && MODEL_MAP[collection] && this.data[collection][idx]?.id) {
-          const updatedDoc = this.data[collection][idx];
-          MODEL_MAP[collection].updateOne({ id: updatedDoc.id }, updatedDoc, { upsert: true }).catch(err => {
+        const item = this.data[collection][idx];
+        const lookupId = item?.bookingId || item?.id;
+        if (this.isMongoConnected && MODEL_MAP[collection] && lookupId) {
+          MODEL_MAP[collection].updateOne(
+            { $or: [{ id: lookupId }, { bookingId: lookupId }] }, 
+            item, 
+            { upsert: true }
+          ).catch(err => {
             console.warn(`[MONGO ASYNC UPDATE WARNING] Update in ${collection} failed:`, err.message);
           });
         }

@@ -22,6 +22,7 @@ import centreRoutes from './routes/centreRoutes.js';
 import smsRoutes from './routes/smsRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import buyerRoutes from './routes/buyerRoutes.js';
+import bookingRoutes from './routes/bookingRoutes.js';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use(express.json());
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/bookings', bookingRoutes);
 app.use('/api/slots', slotRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/procurements', procurementRoutes);
