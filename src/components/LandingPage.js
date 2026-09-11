@@ -130,19 +130,6 @@ export function renderLandingPage({ language, t }) {
           </div>
         </div>
 
-        <!-- 1-Click Demo Accounts for Fast Testing -->
-        <div class="demo-pills" style="margin-bottom:48px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
-          <span style="font-weight:700;color:#4b5563;font-size:13px">${isHi ? 'त्वरित परीक्षण (डेमो):' : 'Instant 1-Click Demo Login:'}</span>
-          <button id="demo-farmer-pill" class="demo-pill-btn" title="Login as Demo Farmer Ramesh">
-            👨‍🌾 Ramesh (Farmer)
-          </button>
-          <button id="demo-buyer-pill" class="demo-pill-btn" style="background:#eff6ff;color:#1e40af;border-color:#bfdbfe" title="Login as Demo Buyer Vikram">
-            🏢 Vikram (Buyer)
-          </button>
-          <button id="demo-officer-pill" class="demo-pill-btn" title="Login as Mandi Admin Dr. Alok">
-            🛡️ Dr. Alok (Admin)
-          </button>
-        </div>
 
         <!-- Platform Impact Metrics Grid -->
         <div class="trust-stats" style="margin-bottom:48px">

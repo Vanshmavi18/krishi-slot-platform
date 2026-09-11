@@ -53,15 +53,6 @@ class Database {
             changed = true;
           }
         }
-        // Ensure seed users (e.g. buyers) exist
-        if (Array.isArray(this.data.users)) {
-          for (const u of initialData.users) {
-            if (!this.data.users.some(existing => existing.id === u.id)) {
-              this.data.users.push(u);
-              changed = true;
-            }
-          }
-        }
         if (changed) this.saveLocal();
       } else {
         this.data = JSON.parse(JSON.stringify(initialData));

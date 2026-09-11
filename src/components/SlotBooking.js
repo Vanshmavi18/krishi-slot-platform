@@ -5,8 +5,8 @@ export function renderSlotBooking({ user, centres, crops, availableSlots, select
   const cropList = crops || [];
   const slots = availableSlots || [];
 
-  const farmerName = user?.name || 'Ramesh Kumar';
-  const farmerId = user?.id || 'FRM-UP-26032';
+  const farmerName = user?.name || user?.username || 'Registered Farmer';
+  const farmerId = user?.id || 'FRM-USER';
 
   const sel = selectedValues || {
     centreId: 'CTR-UP-01',

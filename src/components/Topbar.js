@@ -41,12 +41,11 @@ export function renderTopbar({ user, language, t, unreadNotifCount = 0 }) {
           🌐 <span class="lang-text">${language === 'en' ? 'हिन्दी' : 'English'}</span>
         </button>
 
-        <!-- 3-Role Fast Switcher -->
-        <select id="quick-role-switch" class="btn-outline role-select-dropdown" aria-label="Switch User Role">
-          <option value="farmer" ${currentRole === 'farmer' ? 'selected' : ''}>🌾 Ramesh (Farmer)</option>
-          <option value="admin" ${currentRole === 'admin' || currentRole === 'officer' ? 'selected' : ''}>🛡️ Dr. Alok (Admin)</option>
-          <option value="buyer" ${currentRole === 'buyer' ? 'selected' : ''}>🛒 Vikram (Buyer)</option>
-        </select>
+        <!-- Active Role Badge -->
+        <div class="user-role-badge" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;font-size:12px;font-weight:700;color:#334155">
+          <span>${avatarIcon}</span>
+          <span>${roleLabel}</span>
+        </div>
 
         <!-- Notification Bell -->
         <button id="btn-topbar-notif" class="icon-btn notif-bell-btn" title="Open Notifications" aria-label="Notifications">
@@ -58,7 +57,7 @@ export function renderTopbar({ user, language, t, unreadNotifCount = 0 }) {
         <div class="user-pill-container" title="${user?.email || user?.name || 'User'}">
           <div class="user-avatar">${avatarIcon}</div>
           <div class="user-info-text">
-            <b class="user-name">${user?.name || 'Ramesh Kumar'}</b>
+            <b class="user-name">${user?.name || user?.username || 'User'}</b>
             <div class="role-badge ${currentRole}">
               ${roleLabel}
             </div>

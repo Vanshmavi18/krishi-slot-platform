@@ -21,8 +21,6 @@ export const translations = {
       subtitle: 'Book verified procurement slots, monitor live mandi gate queues, receive real-time email & SMS alerts at home, and track DBT payment transfers directly to your bank account.',
       loginFarmer: 'Farmer Login (Email OTP) →',
       loginStaff: 'Mandi Staff Portal',
-      demoFarmer: 'Quick Demo: Farmer Ramesh',
-      demoOfficer: 'Quick Demo: Mandi Officer Verma',
       stats: {
         farmers: '2.4 Lakh+',
         farmersSub: 'Registered Farmers',
@@ -143,8 +141,6 @@ export const translations = {
       subtitle: 'अपनी उपज बेचने के लिए समय स्लॉट बुक करें, घर बैठे लाइव कतार देखें, ईमेल और SMS अलर्ट पाएं, और DBT द्वारा सीधे बैंक खाते में भुगतान प्राप्त करें।',
       loginFarmer: 'किसान लॉगिन (ईमेल OTP) →',
       loginStaff: 'मंडी अधिकारी लॉगिन',
-      demoFarmer: 'तुरंत डेमो: किसान रमेश कुमार',
-      demoOfficer: 'तुरंत डेमो: मंडी निरीक्षक वर्मा',
       stats: {
         farmers: '2.4 लाख+',
         farmersSub: 'पंजीकृत किसान',

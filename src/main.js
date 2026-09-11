@@ -284,9 +284,9 @@ class AgriQueueApp {
   async handleSlotBooking() {
     try {
       const res = await api.bookSlot({
-        farmerId: this.user?.id || 'FRM-UP-26032',
-        farmerName: this.user?.name || 'Ramesh Kumar',
-        farmerPhone: this.user?.phone || '9876543210',
+        farmerId: this.user?.id || 'FRM-USER',
+        farmerName: this.user?.name || this.user?.username || 'Registered Farmer',
+        farmerPhone: this.user?.phone || '',
         farmerEmail: this.user?.email || null,
         centreId: this.bookingState.centreId,
         cropId: this.bookingState.cropId,
@@ -491,15 +491,10 @@ class AgriQueueApp {
     document.getElementById('hero-btn-login')?.addEventListener('click', () => this.authModal.open('farmer', 'login'));
     document.getElementById('hero-btn-staff')?.addEventListener('click', () => this.authModal.open('admin', 'login'));
     document.getElementById('hero-btn-buyer')?.addEventListener('click', () => this.authModal.open('buyer', 'login'));
-    document.getElementById('demo-farmer-pill')?.addEventListener('click', () => this.switchRole('farmer'));
-    document.getElementById('demo-officer-pill')?.addEventListener('click', () => this.switchRole('admin'));
-    document.getElementById('demo-buyer-pill')?.addEventListener('click', () => this.switchRole('buyer'));
-
     // Topbar events
     document.getElementById('btn-toggle-lang')?.addEventListener('click', () => this.toggleLanguage());
     document.getElementById('btn-topbar-notif')?.addEventListener('click', () => this.notificationCenter.toggle());
     document.getElementById('sidebar-notif-btn')?.addEventListener('click', () => this.notificationCenter.toggle(true));
-    document.getElementById('quick-role-switch')?.addEventListener('change', (e) => this.switchRole(e.target.value));
 
     // Mobile Drawer Navigation Toggles
     const closeMobileDrawer = () => {

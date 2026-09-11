@@ -307,7 +307,7 @@ export function renderBuyerDashboard({ user, lots = [], orders = [], availableBo
                 ` : orders.map(ord => `
                   <tr>
                     <td><b>#${ord.id}</b></td>
-                    <td>${ord.farmerName || 'Ramesh Kumar'}</td>
+                    <td>${ord.farmerName || 'Farmer'}</td>
                     <td><b>${ord.cropName}</b></td>
                     <td><strong>${ord.quantity}</strong> qtl</td>
                     <td>₹${(ord.offeredRate || 0).toLocaleString('en-IN')}/qtl</td>

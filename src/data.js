@@ -1,6 +1,6 @@
 export const farmer = {
-  name: 'Ramesh Kumar', id: 'FRM-UP-26032', phone: '+91 98765 43210',
-  village: 'Jaitpur, Gorakhpur, Uttar Pradesh', bank: 'State Bank of India •••• 4862'
+  name: 'Farmer', id: 'FRM-001', phone: '',
+  village: 'Mandi Region', bank: ''
 };
 
 export const nextSlot = {

@@ -460,23 +460,6 @@ export class AuthModal {
     }
   }
 
-  // Quick Demo Login for instant evaluation
-  async handleQuickDemo(role) {
-    this.isLoading = true;
-    this.error = null;
-    this.render();
-
-    try {
-      const res = await this.api.quickSwitch(role);
-      this.isLoading = false;
-      this.close();
-      if (this.onLoginSuccess) this.onLoginSuccess(res.user);
-    } catch (err) {
-      this.isLoading = false;
-      this.error = err.message || 'Quick login failed.';
-      this.render();
-    }
-  }
 
   // ============================================================================
   // VIEW RENDERING
@@ -690,8 +673,9 @@ export class AuthModal {
 
   // Signup Step 3: Choose Username & Password
   renderSignupStep3() {
-    const isFarmer = this.signupRole === 'farmer';
+    const isFarmer = this.signupRole === 'farmer' || !this.signupRole;
     const isBuyer = this.signupRole === 'buyer';
+    const isAdmin = this.signupRole === 'admin';
 
     return `
       <div>
@@ -701,20 +685,27 @@ export class AuthModal {
             <label style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;display:block">
               Registering As:
             </label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
               <button 
                 type="button"
                 id="signup-role-farmer" 
-                style="padding:10px;font-size:13px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isFarmer ? '#ecfdf5' : '#ffffff'};color:${isFarmer ? '#065f46' : '#334155'};border:2px solid ${isFarmer ? '#059669' : '#cbd5e1'};box-shadow:${isFarmer ? '0 4px 12px rgba(5,150,105,0.2)' : 'none'}"
+                style="padding:10px 6px;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isFarmer ? '#ecfdf5' : '#ffffff'};color:${isFarmer ? '#065f46' : '#334155'};border:2px solid ${isFarmer ? '#059669' : '#cbd5e1'};box-shadow:${isFarmer ? '0 4px 12px rgba(5,150,105,0.2)' : 'none'}"
               >
                 👨‍🌾 Farmer (किसान)
               </button>
               <button 
                 type="button"
                 id="signup-role-buyer" 
-                style="padding:10px;font-size:13px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isBuyer ? '#eff6ff' : '#ffffff'};color:${isBuyer ? '#1e40af' : '#334155'};border:2px solid ${isBuyer ? '#2563eb' : '#cbd5e1'};box-shadow:${isBuyer ? '0 4px 12px rgba(37,99,235,0.2)' : 'none'}"
+                style="padding:10px 6px;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isBuyer ? '#eff6ff' : '#ffffff'};color:${isBuyer ? '#1e40af' : '#334155'};border:2px solid ${isBuyer ? '#2563eb' : '#cbd5e1'};box-shadow:${isBuyer ? '0 4px 12px rgba(37,99,235,0.2)' : 'none'}"
               >
                 🏢 Buyer (व्यापारी)
+              </button>
+              <button 
+                type="button"
+                id="signup-role-admin" 
+                style="padding:10px 6px;font-size:12px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isAdmin ? '#f1f5f9' : '#ffffff'};color:${isAdmin ? '#0f172a' : '#334155'};border:2px solid ${isAdmin ? '#475569' : '#cbd5e1'};box-shadow:${isAdmin ? '0 4px 12px rgba(71,85,105,0.2)' : 'none'}"
+              >
+                🏛️ Mandi Admin
               </button>
             </div>
           </div>
@@ -787,7 +778,7 @@ export class AuthModal {
               <input 
                 id="signup-fullname-input" 
                 type="text" 
-                placeholder="e.g. Ramesh Kumar" 
+                placeholder="e.g. Enter your full name" 
                 style="width:100%;padding:12px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:14px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
               />
             </div>
@@ -932,23 +923,6 @@ export class AuthModal {
           </div>
         </form>
 
-        <!-- 1-Click Instant Demo Testing Accounts -->
-        <div style="margin-top:24px;padding:14px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center">
-          <div style="font-size:11px;font-weight:800;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em">
-            ⚡ Instant 1-Click Demo Accounts (Test Without Typing):
-          </div>
-          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-            <button type="button" class="btn-demo-quick-login" data-role="farmer" style="font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;background:#ecfdf5;color:#065f46;border:1.5px solid #10b981;cursor:pointer">
-              👨‍🌾 Farmer (Ramesh)
-            </button>
-            <button type="button" class="btn-demo-quick-login" data-role="buyer" style="font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;background:#eff6ff;color:#1e40af;border:1.5px solid #3b82f6;cursor:pointer">
-              🏢 Buyer (Vikram)
-            </button>
-            <button type="button" class="btn-demo-quick-login" data-role="admin" style="font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;background:#f1f5f9;color:#0f172a;border:1.5px solid #64748b;cursor:pointer">
-              🛡️ Admin (Dr. Alok)
-            </button>
-          </div>
-        </div>
       </div>
     `;
   }
@@ -1197,6 +1171,10 @@ export class AuthModal {
       this.signupRole = 'buyer';
       this.render();
     });
+    document.getElementById('signup-role-admin')?.addEventListener('click', () => {
+      this.signupRole = 'admin';
+      this.render();
+    });
 
     // Signup password toggle
     document.getElementById('btn-toggle-signup-pwd')?.addEventListener('click', () => {
@@ -1264,12 +1242,5 @@ export class AuthModal {
       this.render();
     });
 
-    // 1-Click Instant Demo Login buttons
-    document.querySelectorAll('.btn-demo-quick-login').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const role = btn.getAttribute('data-role');
-        if (role) this.handleQuickDemo(role);
-      });
-    });
   }
 }
