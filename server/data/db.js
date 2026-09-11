@@ -412,7 +412,7 @@ class Database {
         const doc = await User.findOneAndUpdate(
           { $or: orConditions },
           { $set: { ...updateDoc, updatedAt: new Date() } },
-          { new: true }
+          { returnDocument: 'after' }
         ).lean().exec();
         if (doc) updatedItem = doc;
       } catch (err) {
@@ -533,7 +533,7 @@ class Database {
         const doc = await Booking.findOneAndUpdate(
           { $or: orConditions },
           { $set: { ...updateDoc, updatedAt: new Date() } },
-          { new: true }
+          { returnDocument: 'after' }
         ).lean().exec();
         if (doc) updatedItem = doc;
       } catch (mongoErr) {

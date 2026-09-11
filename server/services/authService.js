@@ -60,7 +60,7 @@ async function saveOtpRecord({ email, otp, purpose }) {
           lastSentAt: now,
           expiresAt
         },
-        { upsert: true, new: true }
+        { upsert: true, returnDocument: 'after' }
       );
     } catch (err) {
       console.warn(`[OTP] MongoDB save warning: ${err.message}`);
