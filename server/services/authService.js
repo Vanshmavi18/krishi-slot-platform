@@ -204,13 +204,21 @@ export async function sendSignupOtp(email) {
     console.log(`[AUTH SERVICE] Signup OTP for ${cleanEmail}: [ ${otp} ] (Gateway: ${emailResult?.provider || 'SIMULATOR'})`);
   }
 
+  const emailSent = Boolean(emailResult?.status === 'SENT');
+  const isReal = Boolean(emailResult?.isReal);
+  const providerNotice = (!emailSent || !isReal)
+    ? (emailResult?.providerError || 'Email gateway in simulator mode. Set GMAIL_USER & GMAIL_APP_PASSWORD in Render.')
+    : null;
+
   return {
     success: true,
     message: 'OTP sent to your email',
     email: cleanEmail,
     expiresInSec: 300,
-    emailSent: Boolean(emailResult?.status === 'SENT'),
-    isRealEmail: Boolean(emailResult?.isReal)
+    emailSent,
+    isRealEmail: isReal && emailSent,
+    gatewayProvider: emailResult?.provider || 'SIMULATOR',
+    providerNotice
   };
 }
 
@@ -523,13 +531,21 @@ export async function sendResetOtp(email) {
     console.log(`[AUTH SERVICE] Password reset OTP for ${cleanEmail}: [ ${otp} ] (Gateway: ${emailResult?.provider || 'SIMULATOR'})`);
   }
 
+  const emailSent = Boolean(emailResult?.status === 'SENT');
+  const isReal = Boolean(emailResult?.isReal);
+  const providerNotice = (!emailSent || !isReal)
+    ? (emailResult?.providerError || 'Email gateway in simulator mode. Set GMAIL_USER & GMAIL_APP_PASSWORD in Render.')
+    : null;
+
   return {
     success: true,
     message: 'OTP sent to your email',
     email: cleanEmail,
     expiresInSec: 300,
-    emailSent: Boolean(emailResult?.status === 'SENT'),
-    isRealEmail: Boolean(emailResult?.isReal)
+    emailSent,
+    isRealEmail: isReal && emailSent,
+    gatewayProvider: emailResult?.provider || 'SIMULATOR',
+    providerNotice
   };
 }
 

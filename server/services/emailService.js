@@ -60,19 +60,24 @@ export function getEmailGatewayStatus() {
   const config = getEmailGatewayConfig();
   const resendKey = (process.env.RESEND_API_KEY || '').trim();
   const hasResend = Boolean(resendKey && resendKey !== 're_xxxxxxxxx' && !resendKey.includes('xxxx'));
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+  const hasBrevo = Boolean(brevoKey && brevoKey.length > 10);
+  const hasGmail = Boolean(config && config.type === 'GMAIL');
 
-  if (hasResend) {
-    return {
-      configured: true,
-      gatewayType: 'RESEND_HTTPS',
-      senderEmail: process.env.RESEND_FROM || 'AgriQueue <onboarding@resend.dev>'
-    };
-  }
+  let activePrimary = 'SIMULATOR';
+  if (hasResend) activePrimary = 'RESEND_HTTPS';
+  else if (hasBrevo) activePrimary = 'BREVO_HTTPS';
+  else if (hasGmail) activePrimary = 'GMAIL_SMTP';
 
   return {
-    configured: Boolean(config),
-    gatewayType: config ? config.type : 'SIMULATOR',
-    senderEmail: config ? config.user : null
+    configured: Boolean(hasResend || hasBrevo || hasGmail),
+    primaryGateway: activePrimary,
+    hasGmailSmtp: hasGmail,
+    hasResendHttps: hasResend,
+    hasBrevoHttps: hasBrevo,
+    gmailAccount: config?.user ? `${config.user.slice(0, 3)}***@${config.user.split('@')[1]}` : null,
+    resendSender: process.env.RESEND_FROM || null,
+    environment: process.env.NODE_ENV || 'development'
   };
 }
 
@@ -502,6 +507,53 @@ export async function sendEmail({ to, recipientName = 'User', type = 'OTP', data
       return emailRecord;
     } catch (resendErr) {
       console.warn('[RESEND WARNING] Failed via Resend SDK:', resendErr.message);
+      emailRecord.providerError = `Resend: ${resendErr.message}`;
+    }
+  }
+
+  // 1b. High-compatibility Brevo (Sendinblue) HTTPS REST API (Port 443 - zero firewall blocks on Render)
+  const brevoKey = (process.env.BREVO_API_KEY || '').trim();
+  if (brevoKey && !emailRecord.isReal) {
+    try {
+      console.log(`[EMAIL GATEWAY] Dispatching via Brevo HTTPS REST API to ${cleanEmail}...`);
+      const brevoSender = process.env.BREVO_SENDER || process.env.GMAIL_USER || 'agriqueue.official@gmail.com';
+      const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': brevoKey,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'AgriQueue Official', email: brevoSender },
+          to: [{ email: cleanEmail, name: recipientName || cleanEmail.split('@')[0] }],
+          subject: templateContent.subject,
+          htmlContent: templateContent.html,
+          textContent: templateContent.text
+        })
+      });
+
+      const brevoData = await brevoRes.json();
+      if (brevoRes.ok && (brevoData.messageId || brevoData.id)) {
+        emailRecord.status = 'SENT';
+        emailRecord.provider = 'BREVO_HTTPS';
+        emailRecord.messageId = brevoData.messageId || brevoData.id;
+        emailRecord.isReal = true;
+        console.log(`\n[REAL BREVO DISPATCH SUCCESS] -> Sent to: ${cleanEmail} (MessageId: ${emailRecord.messageId})\n`);
+
+        if (data?.otp) {
+          console.log(`🔑 [OTP DISPATCH] Destination: ${cleanEmail} | Verification Code: ${data.otp} | Real Email Sent: true\n`);
+        }
+        dispatchedEmails.unshift(emailRecord);
+        if (dispatchedEmails.length > 50) dispatchedEmails.pop();
+        emailEvents.emit('email_sent', emailRecord);
+        return emailRecord;
+      } else {
+        throw new Error(brevoData.message || 'Brevo API rejected dispatch');
+      }
+    } catch (brevoErr) {
+      console.warn('[BREVO WARNING] Failed via Brevo API:', brevoErr.message);
+      emailRecord.providerError = (emailRecord.providerError ? `${emailRecord.providerError} | ` : '') + `Brevo: ${brevoErr.message}`;
     }
   }
 

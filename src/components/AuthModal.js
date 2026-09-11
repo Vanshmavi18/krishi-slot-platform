@@ -143,6 +143,9 @@ export class AuthModal {
       this.isLoading = false;
       this.signupStep = 2;
       this.successMessage = res.message || 'OTP sent to your email';
+      if (res.providerNotice) {
+        this.error = res.providerNotice;
+      }
       this.render();
       this.startResendTimer(60, 'signup-timer-display', 'btn-resend-signup-otp');
     } catch (err) {
@@ -360,6 +363,9 @@ export class AuthModal {
       this.isLoading = false;
       this.forgotStep = 2;
       this.successMessage = res.message || 'OTP sent to your email';
+      if (res.providerNotice) {
+        this.error = res.providerNotice;
+      }
       this.render();
       this.startResendTimer(60, 'forgot-timer-display', 'btn-resend-forgot-otp');
     } catch (err) {
