@@ -472,12 +472,25 @@ class AgriQueueApp {
 
     // Landing Page events
     document.getElementById('landing-lang-toggle')?.addEventListener('click', () => this.toggleLanguage());
-    document.getElementById('landing-btn-farmer')?.addEventListener('click', () => this.authModal.open('farmer'));
-    document.getElementById('landing-btn-staff')?.addEventListener('click', () => this.authModal.open('admin'));
-    document.getElementById('landing-btn-buyer')?.addEventListener('click', () => this.authModal.open('buyer'));
-    document.getElementById('hero-btn-login')?.addEventListener('click', () => this.authModal.open('farmer'));
-    document.getElementById('hero-btn-staff')?.addEventListener('click', () => this.authModal.open('admin'));
-    document.getElementById('hero-btn-buyer')?.addEventListener('click', () => this.authModal.open('buyer'));
+    document.getElementById('landing-btn-login')?.addEventListener('click', () => this.authModal.open('farmer', 'login'));
+    document.getElementById('landing-btn-signup')?.addEventListener('click', () => this.authModal.open('farmer', 'signup'));
+    document.getElementById('nav-btn-login')?.addEventListener('click', () => this.authModal.open('farmer', 'login'));
+    document.getElementById('nav-btn-signup')?.addEventListener('click', () => this.authModal.open('farmer', 'signup'));
+    document.getElementById('landing-btn-farmer')?.addEventListener('click', () => this.authModal.open('farmer', 'login'));
+    document.getElementById('landing-btn-staff')?.addEventListener('click', () => this.authModal.open('admin', 'login'));
+    document.getElementById('landing-btn-buyer')?.addEventListener('click', () => this.authModal.open('buyer', 'login'));
+    document.getElementById('role-card-farmer')?.addEventListener('click', (e) => {
+      if (e.target.id !== 'landing-btn-farmer') this.authModal.open('farmer', 'login');
+    });
+    document.getElementById('role-card-buyer')?.addEventListener('click', (e) => {
+      if (e.target.id !== 'landing-btn-buyer') this.authModal.open('buyer', 'login');
+    });
+    document.getElementById('role-card-staff')?.addEventListener('click', (e) => {
+      if (e.target.id !== 'landing-btn-staff') this.authModal.open('admin', 'login');
+    });
+    document.getElementById('hero-btn-login')?.addEventListener('click', () => this.authModal.open('farmer', 'login'));
+    document.getElementById('hero-btn-staff')?.addEventListener('click', () => this.authModal.open('admin', 'login'));
+    document.getElementById('hero-btn-buyer')?.addEventListener('click', () => this.authModal.open('buyer', 'login'));
     document.getElementById('demo-farmer-pill')?.addEventListener('click', () => this.switchRole('farmer'));
     document.getElementById('demo-officer-pill')?.addEventListener('click', () => this.switchRole('admin'));
     document.getElementById('demo-buyer-pill')?.addEventListener('click', () => this.switchRole('buyer'));
@@ -502,8 +515,8 @@ class AgriQueueApp {
     document.getElementById('btn-close-sidebar')?.addEventListener('click', closeMobileDrawer);
     document.getElementById('sidebar-backdrop')?.addEventListener('click', closeMobileDrawer);
     
-    document.getElementById('btn-logout')?.addEventListener('click', () => {
-      api.setSession(null, null);
+    document.getElementById('btn-logout')?.addEventListener('click', async () => {
+      await api.logout();
       this.user = null;
       this.currentView = 'landing';
       this.myBookings = [];
@@ -1284,6 +1297,121 @@ class AgriQueueApp {
       this.showToast('🖨️ Generating Gate Pass PDF with digital security barcode...');
       window.print();
     });
+
+    // Buyer Direct Slot Booking Modal
+    document.getElementById('btn-buyer-open-booking-modal')?.addEventListener('click', () => {
+      const modal = document.getElementById('buyer-book-slot-modal');
+      if (modal) modal.classList.remove('hidden');
+    });
+
+    document.getElementById('btn-close-buyer-booking-modal')?.addEventListener('click', () => {
+      document.getElementById('buyer-book-slot-modal')?.classList.add('hidden');
+    });
+
+    const updateBuyerCalc = () => {
+      const q = Number(document.getElementById('buyer-booking-qty')?.value) || 0;
+      const p = Number(document.getElementById('buyer-booking-price')?.value) || 0;
+      const el = document.getElementById('buyer-booking-total-display');
+      if (el) el.innerText = `₹${(q * p).toLocaleString('en-IN')}`;
+    };
+
+    document.getElementById('buyer-booking-qty')?.addEventListener('input', updateBuyerCalc);
+    document.getElementById('buyer-booking-price')?.addEventListener('input', updateBuyerCalc);
+    document.getElementById('buyer-booking-crop')?.addEventListener('change', (e) => {
+      const opt = e.target.selectedOptions[0];
+      const rate = opt?.getAttribute('data-rate');
+      const priceInp = document.getElementById('buyer-booking-price');
+      if (rate && priceInp) {
+        priceInp.value = rate;
+        updateBuyerCalc();
+      }
+    });
+
+    document.getElementById('btn-submit-buyer-direct-booking')?.addEventListener('click', async () => {
+      const centreSel = document.getElementById('buyer-booking-centre');
+      const cropSel = document.getElementById('buyer-booking-crop');
+      const qtyInp = document.getElementById('buyer-booking-qty');
+      const priceInp = document.getElementById('buyer-booking-price');
+      const dateInp = document.getElementById('buyer-booking-date');
+      const slotSel = document.getElementById('buyer-booking-timeslot');
+      const vehicleInp = document.getElementById('buyer-booking-vehicle');
+
+      const payload = {
+        farmerId: this.user?.id || 'BUYER-01',
+        farmerName: this.user?.company || this.user?.name || 'Commercial Buyer',
+        buyerId: this.user?.id || 'BUYER-01',
+        buyerName: this.user?.company || this.user?.name || 'Commercial Buyer',
+        cropName: cropSel ? cropSel.value.split('(')[0].trim() : 'Wheat',
+        quantity: Number(qtyInp?.value) || 50,
+        quantityUnit: 'quintal',
+        expectedPrice: Number(priceInp?.value) || 2425,
+        preferredDate: dateInp?.value || '2026-09-18',
+        timeSlot: slotSel?.value || '10:30 – 11:00 AM',
+        location: centreSel?.selectedOptions[0]?.text || 'Jaitpur Procurement Centre',
+        vehicle: vehicleInp?.value || 'Commercial Truck'
+      };
+
+      try {
+        const res = await api.createBooking(payload);
+        document.getElementById('buyer-book-slot-modal')?.classList.add('hidden');
+        this.showToast(`🎉 Procurement Booking #${res.bookingId} Saved in Database! Gate Token #${res.booking.token}`);
+        await this.refreshData();
+        this.render();
+      } catch (err) {
+        this.showToast(`⚠️ Booking failed: ${err.message}`);
+      }
+    });
+
+    // Buyer Request to Buy Farmer Slot Modal
+    document.querySelectorAll('.btn-request-slot').forEach(btn => {
+      btn.addEventListener('click', () => {
+        try {
+          const booking = JSON.parse(btn.getAttribute('data-booking'));
+          this.activeRequestSlot = booking;
+          const modal = document.getElementById('buyer-request-slot-modal');
+          const summary = document.getElementById('request-modal-slot-summary');
+          const priceInp = document.getElementById('req-offered-price-input');
+          const totalEl = document.getElementById('req-calc-total');
+
+          if (summary) {
+            summary.innerHTML = `
+              <b>${booking.crop || booking.cropName}</b> (${booking.quantity} ${booking.quantityUnit || 'qtl'})<br>
+              <span style="color:#6b7280">Farmer: <b>${booking.farmerName}</b> • ${booking.location || 'APMC Mandi'}</span><br>
+              <span style="color:#15803d">Expected: <b>₹${booking.expectedPrice || 2300}/qtl</b> • Date: <b>${booking.displayDate || booking.date}</b></span>
+            `;
+          }
+          if (priceInp) priceInp.value = booking.expectedPrice || 2300;
+          if (totalEl) totalEl.innerText = `₹${((Number(booking.quantity) || 50) * Number(priceInp?.value || 2300)).toLocaleString('en-IN')}`;
+
+          modal?.classList.remove('hidden');
+        } catch (e) {
+          console.error(e);
+        }
+      });
+    });
+
+    document.getElementById('btn-close-request-slot-modal')?.addEventListener('click', () => {
+      document.getElementById('buyer-request-slot-modal')?.classList.add('hidden');
+    });
+
+    document.getElementById('btn-submit-buy-request')?.addEventListener('click', async () => {
+      if (!this.activeRequestSlot) return;
+      const priceInp = document.getElementById('req-offered-price-input');
+      const notesInp = document.getElementById('req-buyer-notes-input');
+
+      try {
+        await api.requestBuySlot(this.activeRequestSlot.bookingId || this.activeRequestSlot.id, {
+          offeredPrice: Number(priceInp?.value) || this.activeRequestSlot.expectedPrice,
+          notes: notesInp?.value || ''
+        });
+        document.getElementById('buyer-request-slot-modal')?.classList.add('hidden');
+        this.showToast(`🤝 Purchase request recorded in database for #${this.activeRequestSlot.bookingId || this.activeRequestSlot.id}!`);
+        await this.refreshData();
+        this.render();
+      } catch (err) {
+        this.showToast(`Request failed: ${err.message}`);
+      }
+    });
   }
 
   render() {
@@ -1400,6 +1528,8 @@ class AgriQueueApp {
           lots: this.buyerLots,
           orders: this.buyerOrders,
           availableBookings: this.availableBookings,
+          centres: this.centres,
+          crops: this.crops,
           t
         });
         break;

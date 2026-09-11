@@ -16,9 +16,9 @@ services:
       - key: NODE_OPTIONS
         value: --dns-result-order=ipv4first
       - key: GMAIL_USER
-        value: vanshmavi018@gmail.com
+        sync: false
       - key: GMAIL_APP_PASSWORD
-        value: vqvtnvteehvucjud
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM

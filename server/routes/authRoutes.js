@@ -1,29 +1,187 @@
 // server/routes/authRoutes.js
 import { Router } from 'express';
-import { 
-  requestEmailOtp,
-  verifyEmailOtp,
-  loginWithEmailPassword,
+import {
+  sendSignupOtp,
+  verifySignupOtp,
+  checkUsernameAvailability,
+  registerUser,
+  loginUser,
+  sendResetOtp,
+  verifyResetOtp,
+  resetPassword,
   checkEmailAuth,
   saveEmailPassword,
   getEmailGatewayStatus,
-  requestOtp, 
-  verifyOtp, 
-  loginStaff, 
-  loginBuyer, 
+  loginStaff,
+  loginBuyer,
   quickSwitch,
-  loginWithMobilePassword,
-  checkPhoneAuth,
-  saveUserPassword,
   updateUserProfile
 } from '../services/authService.js';
 import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
 
-// --- EMAIL AUTHENTICATION ENDPOINTS (PRIMARY) ---
+// ============================================================================
+// 1. SIGNUP & EMAIL OTP ENDPOINTS
+// ============================================================================
 
-// Check Real Gmail / SMTP Gateway Configuration Status
+// Step 2: Send 6-Digit OTP to Gmail for Signup
+router.post('/send-signup-otp', async (req, res) => {
+  try {
+    const email = req.body.email || req.body.identifier;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email address is required.' });
+    }
+    const result = await sendSignupOtp(email);
+    res.json(result);
+  } catch (err) {
+    const isDuplicate = err.message && err.message.includes('already exists');
+    const isRateLimit = err.message && err.message.includes('wait');
+    const status = isDuplicate ? 409 : (isRateLimit ? 429 : 400);
+    res.status(status).json({ success: false, error: err.message });
+  }
+});
+
+// Step 3: Verify Gmail OTP
+router.post('/verify-signup-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, error: 'Email and 6-digit OTP are required.' });
+    }
+    const result = await verifySignupOtp(email, otp);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Step 4: Check if username is available and valid format
+router.all('/check-username', async (req, res) => {
+  try {
+    const username = req.query.username || req.body.username;
+    if (!username) {
+      return res.status(400).json({ available: false, error: 'Username is required.' });
+    }
+    const result = await checkUsernameAvailability(username);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ available: false, error: err.message });
+  }
+});
+
+// Step 5: Complete Account Creation (Stores in MongoDB)
+router.post('/signup', async (req, res) => {
+  try {
+    const result = await registerUser(req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    const isDuplicate = err.message && (err.message.includes('already exists') || err.message.includes('already taken'));
+    res.status(isDuplicate ? 409 : 400).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/register', async (req, res) => {
+  try {
+    const result = await registerUser(req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    const isDuplicate = err.message && (err.message.includes('already exists') || err.message.includes('already taken'));
+    res.status(isDuplicate ? 409 : 400).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================================
+// 2. LOGIN & SESSION ENDPOINTS
+// ============================================================================
+
+// Unified Login accepting Username OR Gmail + Password
+const loginHandler = async (req, res) => {
+  try {
+    const identifier = req.body.identifier || req.body.username || req.body.email || req.body.phone;
+    const { password } = req.body;
+
+    if (!identifier || !password) {
+      return res.status(400).json({ success: false, error: 'Invalid username/email or password' });
+    }
+
+    const result = await loginUser(identifier, password);
+    res.json(result);
+  } catch (err) {
+    // 401 Unauthorized with generic message
+    res.status(401).json({ success: false, error: err.message || 'Invalid username/email or password' });
+  }
+};
+
+router.post('/login', loginHandler);
+router.post('/login-email-password', loginHandler);
+router.post('/login-mobile-password', loginHandler);
+
+// Logout (Session Invalidation)
+router.post('/logout', (req, res) => {
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+// ============================================================================
+// 3. FORGOT PASSWORD ENDPOINTS
+// ============================================================================
+
+// Step 1 & 2: Send Reset OTP
+router.post('/send-reset-otp', async (req, res) => {
+  try {
+    const email = req.body.email || req.body.identifier;
+    if (!email) {
+      return res.status(400).json({ success: false, error: 'Email address is required.' });
+    }
+    const result = await sendResetOtp(email);
+    res.json(result);
+  } catch (err) {
+    const isNotFound = err.message && err.message.includes('No account found');
+    const isRateLimit = err.message && err.message.includes('wait');
+    const status = isNotFound ? 404 : (isRateLimit ? 429 : 400);
+    res.status(status).json({ success: false, error: err.message });
+  }
+});
+
+// Step 3: Verify Reset OTP
+router.post('/verify-reset-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, error: 'Email and 6-digit OTP are required.' });
+    }
+    const result = await verifyResetOtp(email, otp);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// Step 4: Reset Password (Updates MongoDB & invalidates old password)
+router.post('/reset-password', async (req, res) => {
+  try {
+    const result = await resetPassword(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/save-email-password', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const result = await saveEmailPassword(email, password);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================================
+// 4. SYSTEM STATUS, ROLE SWITCHER & COMPATIBILITY ENDPOINTS
+// ============================================================================
+
+// Email gateway configuration status check
 router.get('/email-status', (req, res) => {
   try {
     const status = getEmailGatewayStatus();
@@ -33,86 +191,40 @@ router.get('/email-status', (req, res) => {
   }
 });
 
-// 1. Send OTP to Email
-router.post('/send-email-otp', async (req, res) => {
-  try {
-    const { email } = req.body;
-    const result = await requestEmailOtp(email);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// 2. Verify Email OTP (with optional password creation)
-router.post('/verify-email-otp', async (req, res) => {
-  try {
-    const { email, otp, savePassword } = req.body;
-    const result = await verifyEmailOtp(email, otp, savePassword);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// 3. Login with Email + Password
-router.post('/login-email-password', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const result = await loginWithEmailPassword(email, password);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// 4. Check Email registration status
-router.get('/check-email', (req, res) => {
+// Check email registration
+router.get('/check-email', async (req, res) => {
   try {
     const { email } = req.query;
-    const result = checkEmailAuth(email);
+    const result = await checkEmailAuth(email);
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
 });
 
-// 5. Save/Reset password by Email
-router.post('/save-email-password', (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const result = saveEmailPassword(email, password);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// --- ROLE-SPECIFIC LOGIN ENDPOINTS ---
-
-// Staff/Admin Login (by Staff ID or Email + Password)
+// Staff/Admin Login
 router.post('/login-staff', async (req, res) => {
   try {
     const { staffId, password, identifier } = req.body;
     const result = await loginStaff(staffId || identifier, password);
     res.json(result);
   } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(401).json({ success: false, error: err.message });
   }
 });
 
-// Buyer Login (by Buyer ID or Email + Password)
+// Buyer Login
 router.post('/login-buyer', async (req, res) => {
   try {
     const { identifier, email, password } = req.body;
     const result = await loginBuyer(identifier || email, password);
     res.json(result);
   } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
+    res.status(401).json({ success: false, error: err.message });
   }
 });
 
-// Instant 1-Click Role Switch
+// 1-Click Role Switch for Demonstration
 router.post('/quick-switch', (req, res) => {
   try {
     const { role, id } = req.body;
@@ -123,18 +235,34 @@ router.post('/quick-switch', (req, res) => {
   }
 });
 
-// Current User Profile
+// Current Authenticated User Profile
 router.get('/me', authenticate, (req, res) => {
   const { passwordHash, ...safeUser } = req.user;
   res.json({ success: true, user: safeUser });
 });
 
-// --- LEGACY ADAPTER ENDPOINTS ---
+// Legacy OTP endpoints
+router.post('/send-email-otp', async (req, res) => {
+  try {
+    const result = await sendSignupOtp(req.body.email || req.body.identifier);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
 
 router.post('/send-otp', async (req, res) => {
   try {
-    const target = req.body.email || req.body.phone;
-    const result = await requestOtp(target);
+    const result = await sendSignupOtp(req.body.email || req.body.phone || req.body.identifier);
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/verify-email-otp', async (req, res) => {
+  try {
+    const result = await verifySignupOtp(req.body.email || req.body.identifier, req.body.otp);
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
@@ -143,48 +271,14 @@ router.post('/send-otp', async (req, res) => {
 
 router.post('/verify-otp', async (req, res) => {
   try {
-    const target = req.body.email || req.body.phone;
-    const { otp, savePassword } = req.body;
-    const result = await verifyOtp(target, otp, savePassword);
+    const result = await verifySignupOtp(req.body.email || req.body.phone || req.body.identifier, req.body.otp);
     res.json(result);
   } catch (err) {
     res.status(400).json({ success: false, error: err.message });
   }
 });
 
-router.post('/login-mobile-password', async (req, res) => {
-  try {
-    const target = req.body.email || req.body.phone;
-    const { password } = req.body;
-    const result = await loginWithMobilePassword(target, password);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-router.get('/check-phone', (req, res) => {
-  try {
-    const { phone } = req.query;
-    const result = checkPhoneAuth(phone);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-router.post('/save-password', (req, res) => {
-  try {
-    const target = req.body.email || req.body.phone;
-    const { password } = req.body;
-    const result = saveUserPassword(target, password);
-    res.json(result);
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-// Update profile details
+// Profile update
 router.put('/profile', (req, res) => {
   try {
     const { userId, ...updates } = req.body;

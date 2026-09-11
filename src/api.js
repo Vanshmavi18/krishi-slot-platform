@@ -116,29 +116,82 @@ class ApiService {
     this.listeners.notification.push(fn);
   }
 
-  // --- EMAIL AUTHENTICATION ---
-  async sendEmailOtp(email) {
-    return this.fetch('/api/auth/send-email-otp', {
+  // --- NEW USER SIGNUP FLOW ---
+  async sendSignupOtp(email) {
+    return this.fetch('/api/auth/send-signup-otp', {
       method: 'POST',
       body: JSON.stringify({ email })
     });
   }
 
-  async verifyEmailOtp(email, otp, savePassword = null) {
-    const data = await this.fetch('/api/auth/verify-email-otp', {
+  async verifySignupOtp(email, otp) {
+    return this.fetch('/api/auth/verify-signup-otp', {
       method: 'POST',
-      body: JSON.stringify({ email, otp, savePassword })
+      body: JSON.stringify({ email, otp })
+    });
+  }
+
+  async checkUsername(username) {
+    return this.fetch(`/api/auth/check-username?username=${encodeURIComponent(username)}`);
+  }
+
+  async signup(payload) {
+    return this.fetch('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // --- LOGIN FLOW ---
+  async login(identifier, password) {
+    const data = await this.fetch('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ identifier, password })
     });
     this.setSession(data.token, data.user);
     return data;
   }
 
-  async loginWithEmailPassword(email, password) {
-    const data = await this.fetch('/api/auth/login-email-password', {
+  async loginWithEmailPassword(emailOrIdentifier, password) {
+    return this.login(emailOrIdentifier, password);
+  }
+
+  async logout() {
+    try {
+      await this.fetch('/api/auth/logout', { method: 'POST' });
+    } catch (_) {}
+    this.setSession(null, null);
+  }
+
+  // --- FORGOT PASSWORD FLOW ---
+  async sendResetOtp(email) {
+    return this.fetch('/api/auth/send-reset-otp', {
       method: 'POST',
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email })
     });
-    this.setSession(data.token, data.user);
+  }
+
+  async verifyResetOtp(email, otp) {
+    return this.fetch('/api/auth/verify-reset-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp })
+    });
+  }
+
+  async resetPassword(payload) {
+    return this.fetch('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
+  // Legacy aliases
+  async sendEmailOtp(email) {
+    return this.sendSignupOtp(email);
+  }
+
+  async verifyEmailOtp(email, otp, savePassword = null) {
+    const data = await this.verifySignupOtp(email, otp);
     return data;
   }
 

@@ -22,46 +22,48 @@ const TIME_SLOTS = [
  * Description: Create a new farmer slot booking in MongoDB with capacity & duplicate checks
  */
 const createBookingHandler = async (req, res) => {
-  const farmerId = req.user?.id;
-  const farmerName = req.user?.name || 'Registered Farmer';
-  const farmerPhone = req.user?.phone || '';
-  const farmerEmail = req.user?.email || null;
+  const isBuyer = req.user?.role === 'buyer';
+  const farmerId = isBuyer ? (req.body.farmerId || 'FRM-MANDI') : (req.user?.id || 'FRM-UP-26032');
+  const farmerName = isBuyer ? (req.body.farmerName || 'Procurement Lot / Mandi Farmer') : (req.user?.name || 'Registered Farmer');
+  const farmerPhone = isBuyer ? (req.body.farmerPhone || '') : (req.user?.phone || '');
+  const farmerEmail = isBuyer ? (req.body.farmerEmail || null) : (req.user?.email || null);
+  const buyerId = isBuyer ? req.user?.id : (req.body.buyerId || null);
+  const buyerName = isBuyer ? (req.user?.company || req.user?.name || 'Commercial Buyer') : (req.body.buyerName || null);
 
-  console.log(`[BOOKING] Booking creation started for farmer: ${farmerId}`);
+  console.log(`[BOOKING] Booking creation started by ${req.user?.role || 'user'}: ${req.user?.id}`);
 
   try {
-    const {
-      cropName,
-      quantity,
-      quantityUnit = 'quintal',
-      expectedPrice,
-      preferredDate,
-      timeSlot,
-      location,
-      vehicle = 'Tractor Trolley',
-      notes = ''
-    } = req.body;
+    const cropName = String(req.body.cropName || req.body.crop || '').trim();
+    const rawQuantity = req.body.quantity !== undefined ? req.body.quantity : req.body.qty;
+    let quantityUnit = String(req.body.quantityUnit || req.body.unit || 'quintal').toLowerCase().trim();
+    if (quantityUnit === 'qtl' || quantityUnit === 'quintals') quantityUnit = 'quintal';
+    if (quantityUnit === 'kgs') quantityUnit = 'kg';
+    if (quantityUnit === 'tons') quantityUnit = 'ton';
+
+    const rawPrice = req.body.expectedPrice !== undefined ? req.body.expectedPrice : (req.body.price !== undefined ? req.body.price : 2275);
+    const preferredDate = req.body.preferredDate || req.body.slotDate || req.body.date;
+    const rawTimeSlot = String(req.body.timeSlot || req.body.slotTime || req.body.slot || '09:00 – 09:30 AM').trim();
+    const location = String(req.body.location || req.body.center || req.body.mandiId || req.body.mandiName || 'Main APMC Mandi Yard').trim();
+    const vehicle = req.body.vehicle || req.body.vehicleNumber || 'Tractor Trolley';
+    const notes = req.body.notes || '';
 
     // 1. Server-side field validations
-    if (!cropName || typeof cropName !== 'string' || !cropName.trim()) {
+    if (!cropName) {
       return res.status(400).json({ success: false, error: 'Crop/Product name is required' });
     }
 
-    const qty = Number(quantity);
+    const qty = Number(rawQuantity);
     if (isNaN(qty) || qty <= 0) {
       return res.status(400).json({ success: false, error: 'Quantity must be a positive number' });
     }
 
     const validUnits = ['kg', 'quintal', 'ton'];
-    const cleanUnit = String(quantityUnit).toLowerCase().trim();
-    if (!validUnits.includes(cleanUnit)) {
-      return res.status(400).json({ success: false, error: `Invalid quantity unit. Must be one of: ${validUnits.join(', ')}` });
+    if (!validUnits.includes(quantityUnit)) {
+      quantityUnit = 'quintal';
     }
+    const cleanUnit = quantityUnit;
 
-    const price = Number(expectedPrice);
-    if (isNaN(price) || price <= 0) {
-      return res.status(400).json({ success: false, error: 'Expected selling price must be a positive number' });
-    }
+    const price = Number(rawPrice) > 0 ? Number(rawPrice) : 2275;
 
     if (!preferredDate) {
       return res.status(400).json({ success: false, error: 'Preferred delivery date is required' });
@@ -72,22 +74,14 @@ const createBookingHandler = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Preferred date is not a valid date format' });
     }
 
-    if (!timeSlot || typeof timeSlot !== 'string' || !timeSlot.trim()) {
-      return res.status(400).json({ success: false, error: 'Preferred time slot is required' });
-    }
-
-    if (!location || typeof location !== 'string' || !location.trim()) {
-      return res.status(400).json({ success: false, error: 'Location / Mandi is required' });
-    }
-
     const dateIso = parsedDate.toISOString().split('T')[0];
-    const cleanSlot = timeSlot.trim();
+    const cleanSlot = rawTimeSlot.replace('-', '–'); // normalize hyphen to en-dash
 
     // 2. Validate Slot existence & Capacity limits (Section 8: Slot Availability)
     const matchedSlotDef = TIME_SLOTS.find(
-      s => s.label === cleanSlot || s.id === cleanSlot || cleanSlot.includes(s.label.split('–')[0].trim())
+      s => s.label === cleanSlot || s.id === cleanSlot || cleanSlot.includes(s.label.split('–')[0].trim()) || cleanSlot.includes(s.label.split('-')[0].trim())
     );
-    const maxCapacity = matchedSlotDef?.maxCapacity || 15;
+    const maxCapacity = matchedSlotDef?.maxCapacity || 25;
 
     // Count existing active bookings for this date and time slot
     const activeBookingCount = await db.countBookings(
@@ -99,7 +93,7 @@ const createBookingHandler = async (req, res) => {
       b => {
         const st = (b.status || '').toUpperCase();
         return (b.date === dateIso || b.slotDate === dateIso) &&
-          b.timeSlot === cleanSlot &&
+          (b.timeSlot === cleanSlot || b.timeSlot === rawTimeSlot) &&
           st !== 'CANCELLED' && st !== 'REJECTED';
       }
     );
@@ -111,9 +105,14 @@ const createBookingHandler = async (req, res) => {
       });
     }
 
-    // 3. Prevent duplicate booking: Farmer already has an active booking for same slot
+    // 3. Prevent duplicate booking: User already has an active booking for same slot
     const existingDuplicate = await db.findOneBooking(
-      {
+      isBuyer ? {
+        buyerId,
+        $or: [{ date: dateIso }, { slotDate: dateIso }],
+        timeSlot: cleanSlot,
+        status: { $nin: ['Cancelled', 'CANCELLED', 'Rejected', 'REJECTED'] }
+      } : {
         farmerId,
         $or: [{ date: dateIso }, { slotDate: dateIso }],
         timeSlot: cleanSlot,
@@ -121,9 +120,10 @@ const createBookingHandler = async (req, res) => {
       },
       b => {
         const st = (b.status || '').toUpperCase();
-        return b.farmerId === farmerId &&
+        const userMatches = isBuyer ? (b.buyerId === buyerId) : (b.farmerId === farmerId);
+        return userMatches &&
           (b.date === dateIso || b.slotDate === dateIso) &&
-          b.timeSlot === cleanSlot &&
+          (b.timeSlot === cleanSlot || b.timeSlot === rawTimeSlot) &&
           st !== 'CANCELLED' && st !== 'REJECTED';
       }
     );
@@ -182,10 +182,16 @@ const createBookingHandler = async (req, res) => {
       notes: String(notes || '').trim(),
       adminNotes: '',
       cancellationReason: '',
-      buyerId: null,
-      buyerName: null,
-      buyerRequests: [],
-      status: 'Pending',
+      buyerId: buyerId || null,
+      buyerName: buyerName || null,
+      buyerRequests: isBuyer ? [{
+        buyerId,
+        buyerName,
+        offeredPrice: price,
+        notes: String(notes || '').trim(),
+        requestedAt: new Date().toISOString()
+      }] : [],
+      status: isBuyer ? 'Approved' : 'Pending',
       queueStatus: 'WAITING',
       vehicle: String(vehicle || 'Tractor Trolley').trim(),
       qrCodeData: `AGRIQUEUE|${bookingId}|${token}|${farmerId}|${qty}${cleanUnit}`,
@@ -265,8 +271,8 @@ const createBookingHandler = async (req, res) => {
   }
 };
 
-router.post('/', authenticate, requireRole('farmer'), createBookingHandler);
-router.post('/book', authenticate, requireRole('farmer'), createBookingHandler);
+router.post('/', authenticate, requireRole('farmer', 'buyer', 'admin'), createBookingHandler);
+router.post('/book', authenticate, requireRole('farmer', 'buyer', 'admin'), createBookingHandler);
 
 /**
  * GET /api/bookings/farmer & GET /api/bookings/my
@@ -333,12 +339,13 @@ const getBuyerBookingsHandler = async (req, res) => {
 
     // Sanitize contact info for privacy if requester is commercial buyer
     const sanitized = bookings.map(b => {
-      if (!isBuyer) return b;
+      const isMine = b.buyerId === currentUserId || b.farmerId === currentUserId || (Array.isArray(b.buyerRequests) && b.buyerRequests.some(r => r.buyerId === currentUserId));
       return {
         ...b,
         farmerPhone: b.farmerPhone ? `XXXXXX${String(b.farmerPhone).slice(-4)}` : undefined,
         farmerEmail: undefined,
-        hasMyRequest: Array.isArray(b.buyerRequests) && b.buyerRequests.some(r => r.buyerId === currentUserId)
+        hasMyRequest: Array.isArray(b.buyerRequests) && b.buyerRequests.some(r => r.buyerId === currentUserId),
+        isMyBooking: Boolean(isMine)
       };
     });
 

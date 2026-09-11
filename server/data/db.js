@@ -76,11 +76,16 @@ class Database {
 
   saveLocal() {
     try {
-      const tempFile = `${DB_FILE}.tmp`;
-      fs.writeFileSync(tempFile, JSON.stringify(this.data, null, 2), 'utf-8');
-      fs.renameSync(tempFile, DB_FILE);
+      fs.writeFileSync(DB_FILE, JSON.stringify(this.data, null, 2), 'utf-8');
     } catch (err) {
-      console.error('[DB ERROR] Failed to write local DB file:', err.message);
+      try {
+        const tempFile = `${DB_FILE}.tmp`;
+        fs.writeFileSync(tempFile, JSON.stringify(this.data, null, 2), 'utf-8');
+        fs.copyFileSync(tempFile, DB_FILE);
+        try { fs.unlinkSync(tempFile); } catch (_) {}
+      } catch (fallbackErr) {
+        console.error('[DB ERROR] Failed to write local DB file:', fallbackErr.message);
+      }
     }
   }
 
@@ -118,8 +123,10 @@ class Database {
       }
 
       await mongoose.connect(uri, {
-        serverSelectionTimeoutMS: 6000,
-        connectTimeoutMS: 10000
+        serverSelectionTimeoutMS: 8000,
+        connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        family: 4 // Force IPv4 resolution
       });
 
       this.isMongoConnected = true;
@@ -182,6 +189,238 @@ class Database {
       collections,
       timestamp: new Date().toISOString()
     };
+  }
+
+  // --- ASYNC USER OPERATIONS (MONGODB WITH DUAL PERSISTENCE) ---
+
+  async createUser(userData) {
+    if (!Array.isArray(this.data.users)) {
+      this.data.users = [];
+    }
+
+    if (userData.email) {
+      userData.email = String(userData.email).trim().toLowerCase();
+      const emailTaken = await this.isEmailTaken(userData.email);
+      if (emailTaken) {
+        const err = new Error('An account with this email address already exists.');
+        err.code = 'DUPLICATE_EMAIL';
+        throw err;
+      }
+    }
+
+    if (userData.username) {
+      userData.username = String(userData.username).trim().toLowerCase();
+      const usernameTaken = await this.isUsernameTaken(userData.username);
+      if (usernameTaken) {
+        const err = new Error('This username is already taken. Please choose another username.');
+        err.code = 'DUPLICATE_USERNAME';
+        throw err;
+      }
+    }
+
+    const existingIdx = this.data.users.findIndex(u => 
+      u.id === userData.id || 
+      (userData.email && u.email && u.email.toLowerCase() === userData.email) ||
+      (userData.username && u.username && u.username.toLowerCase() === userData.username) ||
+      (userData.phone && u.phone && u.phone === userData.phone)
+    );
+    if (existingIdx !== -1) {
+      this.data.users[existingIdx] = { ...this.data.users[existingIdx], ...userData };
+    } else {
+      this.data.users.unshift(userData);
+    }
+    this.saveLocal();
+
+    let result = userData;
+    if (this.isMongoConnected) {
+      try {
+        const created = await User.create(userData);
+        result = created.toObject();
+        console.log(`[USER] User created successfully in MongoDB: ${result.id} (${result.username || result.email || result.phone})`);
+      } catch (mongoErr) {
+        if (mongoErr.code === 11000) {
+          const field = Object.keys(mongoErr.keyPattern || {})[0] || 'credential';
+          const err = new Error(`An account with this ${field} already exists.`);
+          err.code = 'DUPLICATE_' + field.toUpperCase();
+          throw err;
+        }
+        console.warn(`[USER] MongoDB user write notice (${mongoErr.message}). Persisted to local disk.`);
+      }
+    } else {
+      console.log(`[USER] User created successfully in persistent store: ${userData.id} (@${userData.username || 'user'})`);
+    }
+    return result;
+  }
+
+  async updateUserPassword(identifier, passwordHash) {
+    const user = await this.findUserByIdentifier(identifier);
+    if (!user) {
+      throw new Error('User not found.');
+    }
+    return this.updateUser(user.id, { passwordHash });
+  }
+
+  async findUserById(id) {
+    if (this.isMongoConnected) {
+      try {
+        const orConditions = [{ id: id }];
+        if (mongoose.isValidObjectId(id)) {
+          orConditions.push({ _id: id });
+        }
+        const doc = await User.findOne({ $or: orConditions }).lean().exec();
+        if (doc) return doc;
+      } catch (err) {
+        console.warn(`[USER] MongoDB lookup failed (${err.message}). Falling back to local store.`);
+      }
+    }
+    const list = this.get('users');
+    return Array.isArray(list) ? list.find(u => u.id === id || String(u._id) === id) : null;
+  }
+
+  async findUserByUsername(username) {
+    if (!username) return null;
+    const clean = String(username).trim().toLowerCase();
+    if (this.isMongoConnected) {
+      try {
+        const doc = await User.findOne({ username: clean }).lean().exec();
+        if (doc) return doc;
+      } catch (err) {
+        console.warn(`[USER] MongoDB username lookup failed: ${err.message}`);
+      }
+    }
+    const list = this.get('users');
+    return Array.isArray(list) ? list.find(u => u.username && u.username.toLowerCase() === clean) : null;
+  }
+
+  async isUsernameTaken(username, excludeUserId = null) {
+    if (!username) return false;
+    const clean = String(username).trim().toLowerCase();
+    if (this.isMongoConnected) {
+      try {
+        const query = { username: clean };
+        if (excludeUserId) query.id = { $ne: excludeUserId };
+        const count = await User.countDocuments(query);
+        if (count > 0) return true;
+      } catch (err) {}
+    }
+    const list = this.get('users') || [];
+    return list.some(u => u.username && u.username.toLowerCase() === clean && (!excludeUserId || u.id !== excludeUserId));
+  }
+
+  async isEmailTaken(email, excludeUserId = null) {
+    if (!email) return false;
+    const clean = String(email).trim().toLowerCase();
+    if (this.isMongoConnected) {
+      try {
+        const query = { email: clean };
+        if (excludeUserId) query.id = { $ne: excludeUserId };
+        const count = await User.countDocuments(query);
+        if (count > 0) return true;
+      } catch (err) {}
+    }
+    const list = this.get('users') || [];
+    return list.some(u => u.email && u.email.toLowerCase() === clean && (!excludeUserId || u.id !== excludeUserId));
+  }
+
+  async findUserByEmail(email) {
+    if (!email) return null;
+    const clean = String(email).trim().toLowerCase();
+    if (this.isMongoConnected) {
+      try {
+        const doc = await User.findOne({ email: clean }).lean().exec();
+        if (doc) return doc;
+      } catch (err) {
+        console.warn(`[USER] MongoDB email lookup failed: ${err.message}`);
+      }
+    }
+    const list = this.get('users');
+    return Array.isArray(list) ? list.find(u => u.email && u.email.toLowerCase() === clean) : null;
+  }
+
+  async findUserByPhone(phone) {
+    if (!phone) return null;
+    const clean = String(phone).replace(/\D/g, '').slice(-10);
+    if (this.isMongoConnected) {
+      try {
+        const doc = await User.findOne({ phone: { $regex: clean + '$' } }).lean().exec();
+        if (doc) return doc;
+      } catch (err) {
+        console.warn(`[USER] MongoDB phone lookup failed: ${err.message}`);
+      }
+    }
+    const list = this.get('users');
+    return Array.isArray(list) ? list.find(u => u.phone && u.phone.includes(clean)) : null;
+  }
+
+  async findUserByIdentifier(identifier) {
+    if (!identifier) return null;
+    const raw = String(identifier).trim();
+    const cleanLower = raw.toLowerCase();
+    const digits = raw.replace(/\D/g, '').slice(-10);
+
+    if (this.isMongoConnected) {
+      try {
+        const orList = [
+          { email: cleanLower },
+          { username: cleanLower },
+          { id: raw },
+          { staffId: raw },
+          { buyerId: raw }
+        ];
+        if (digits.length === 10) {
+          orList.push({ phone: digits });
+        }
+        if (mongoose.isValidObjectId(raw)) {
+          orList.push({ _id: raw });
+        }
+        const doc = await User.findOne({ $or: orList }).lean().exec();
+        if (doc) return doc;
+      } catch (err) {
+        console.warn(`[USER] MongoDB identifier lookup failed: ${err.message}`);
+      }
+    }
+
+    const list = this.get('users') || [];
+    return list.find(u => 
+      (u.email && u.email.toLowerCase() === cleanLower) ||
+      (u.username && u.username.toLowerCase() === cleanLower) ||
+      (digits.length === 10 && u.phone && u.phone.endsWith(digits)) ||
+      u.id === raw ||
+      u.staffId === raw ||
+      u.buyerId === raw ||
+      String(u._id) === raw
+    ) || null;
+  }
+
+  async updateUser(id, updateDoc) {
+    let updatedItem = null;
+    if (Array.isArray(this.data.users)) {
+      const idx = this.data.users.findIndex(u => u.id === id || String(u._id) === id);
+      if (idx !== -1) {
+        this.data.users[idx] = { ...this.data.users[idx], ...updateDoc, updatedAt: new Date().toISOString() };
+        updatedItem = this.data.users[idx];
+        this.saveLocal();
+      }
+    }
+
+    if (this.isMongoConnected) {
+      try {
+        const orConditions = [{ id: id }];
+        if (mongoose.isValidObjectId(id)) {
+          orConditions.push({ _id: id });
+        }
+        const doc = await User.findOneAndUpdate(
+          { $or: orConditions },
+          { $set: { ...updateDoc, updatedAt: new Date() } },
+          { new: true }
+        ).lean().exec();
+        if (doc) updatedItem = doc;
+      } catch (err) {
+        console.warn(`[USER] MongoDB user update failed: ${err.message}`);
+      }
+    }
+
+    return updatedItem;
   }
 
   // --- ASYNC BOOKING OPERATIONS (MONGODB AS PRIMARY SOURCE OF TRUTH) ---

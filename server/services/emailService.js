@@ -25,12 +25,8 @@ const dispatchedEmails = [];
 // Helper to get active email credentials
 export function getEmailGatewayConfig() {
   dotenv.config();
-  // Cloud deployment fallbacks (Render/Heroku/Vercel)
-  const defaultUser = 'vanshmavi018@gmail.com';
-  const defaultPass = 'vqvtnvteehvucjud';
-
-  const gmailUser = (process.env.GMAIL_USER || defaultUser).trim();
-  const gmailPass = (process.env.GMAIL_APP_PASSWORD || defaultPass).replace(/\s+/g, '').trim();
+  const gmailUser = (process.env.GMAIL_USER || '').trim();
+  const gmailPass = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '').trim();
 
   const smtpUser = (process.env.SMTP_USER || '').trim();
   const smtpPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '').trim();
@@ -109,39 +105,27 @@ export async function getTransporters() {
 
   try {
     if (config.type === 'GMAIL') {
-      const ipv4Host = await resolveGmailIpv4();
+      // Primary: Official Nodemailer Gmail service integration
+      primaryTransporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: config.user,
+          pass: config.pass
+        }
+      });
 
-      const baseOptions = {
+      // Fallback: Port 587 STARTTLS direct
+      fallbackTransporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
         auth: {
           user: config.user,
           pass: config.pass
         },
         tls: {
-          servername: 'smtp.gmail.com',
           rejectUnauthorized: false
-        },
-        pool: true,
-        maxConnections: 5,
-        maxMessages: 100,
-        connectionTimeout: 8000,
-        greetingTimeout: 6000,
-        socketTimeout: 12000
-      };
-
-      // Primary: SSL port 465 with forced IPv4 literal
-      primaryTransporter = nodemailer.createTransport({
-        host: ipv4Host,
-        port: 465,
-        secure: true,
-        ...baseOptions
-      });
-
-      // Fallback: STARTTLS port 587 with forced IPv4 literal
-      fallbackTransporter = nodemailer.createTransport({
-        host: ipv4Host,
-        port: 587,
-        secure: false,
-        ...baseOptions
+        }
       });
     } else {
       primaryTransporter = nodemailer.createTransport({
@@ -231,6 +215,81 @@ export const EMAIL_TEMPLATES = {
       </body>
       </html>
     `
+    };
+  },
+
+  SIGNUP_OTP: ({ name, otp, expiresInMins = 5 }) => {
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    return {
+      subject: `${otp} is your AgriQueue Registration Verification Code [${timeStr}]`,
+      text: `Namaste ${name || 'Friend'},\n\nYour 6-digit registration code for AgriQueue is: ${otp}\n\nThis verification code is valid for ${expiresInMins} minutes. Please do not share this code with anyone.\n\nAgriQueue APMC Portal`,
+      html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:24px 10px;background:#f8fafc;color:#1e293b">
+        <div style="max-width:540px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.06)">
+          <div style="background:linear-gradient(135deg, #064e3b 0%, #15803d 100%);padding:28px 24px;text-align:center;color:#ffffff">
+            <h1 style="margin:0;font-size:24px;font-weight:800">🌱 AgriQueue Account Registration</h1>
+            <p style="margin:6px 0 0;font-size:13px;opacity:0.9">Verify Your Email Address</p>
+          </div>
+          <div style="padding:28px 24px">
+            <p style="font-size:16px;margin:0 0 14px;color:#0f2e1b">Namaste,</p>
+            <p style="font-size:14px;color:#475563;margin:0 0 22px;line-height:1.6">
+              Thank you for signing up with AgriQueue. Please enter the 6-digit verification code below to verify your email address and create your account:
+            </p>
+            <div style="background:#f0fdf4;border:2px dashed #16a34a;border-radius:14px;padding:22px 16px;text-align:center;margin-bottom:24px">
+              <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;color:#166534;text-transform:uppercase;display:block;margin-bottom:8px">Registration Verification Code</span>
+              <div style="font-size:40px;letter-spacing:0.3em;color:#15803d;font-weight:900;font-family:monospace;margin:4px 0">${otp}</div>
+              <span style="font-size:12px;color:#16a34a;display:inline-block;margin-top:6px;font-weight:700">⏱️ Valid for ${expiresInMins} minutes</span>
+            </div>
+            <div style="background:#f8fafc;border-left:4px solid #16a34a;padding:12px 14px;border-radius:6px;margin-bottom:20px;font-size:13px;color:#334155;line-height:1.5">
+              🔒 <b>Security Note:</b> Never share this code with anyone. AgriQueue officials will never ask for your verification code.
+            </div>
+            <p style="font-size:12px;color:#94a3b8;margin:0;line-height:1.5">
+              If you did not initiate this registration, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+      `
+    };
+  },
+
+  PASSWORD_RESET_OTP: ({ name, otp, expiresInMins = 5 }) => {
+    const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    return {
+      subject: `${otp} is your AgriQueue Password Reset Code [${timeStr}]`,
+      text: `Namaste ${name || 'User'},\n\nWe received a request to reset your AgriQueue account password.\n\nYour 6-digit reset code is: ${otp}\n\nThis code is valid for ${expiresInMins} minutes. If you did not request this, please secure your account immediately.\n\nAgriQueue APMC Portal`,
+      html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+      <body style="font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;margin:0;padding:24px 10px;background:#f8fafc;color:#1e293b">
+        <div style="max-width:540px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.06)">
+          <div style="background:linear-gradient(135deg, #991b1b 0%, #dc2626 100%);padding:28px 24px;text-align:center;color:#ffffff">
+            <h1 style="margin:0;font-size:24px;font-weight:800">🔑 Password Reset Request</h1>
+            <p style="margin:6px 0 0;font-size:13px;opacity:0.9">AgriQueue Account Security</p>
+          </div>
+          <div style="padding:28px 24px">
+            <p style="font-size:16px;margin:0 0 14px;color:#0f2e1b">Namaste ${name ? `<b>${name}</b>` : ''},</p>
+            <p style="font-size:14px;color:#475563;margin:0 0 22px;line-height:1.6">
+              We received a request to reset your password. Use the 6-digit code below to verify your identity and set a new password:
+            </p>
+            <div style="background:#fef2f2;border:2px dashed #f87171;border-radius:14px;padding:22px 16px;text-align:center;margin-bottom:24px">
+              <span style="font-size:11px;font-weight:800;letter-spacing:0.12em;color:#991b1b;text-transform:uppercase;display:block;margin-bottom:8px">Password Reset OTP</span>
+              <div style="font-size:40px;letter-spacing:0.3em;color:#dc2626;font-weight:900;font-family:monospace;margin:4px 0">${otp}</div>
+              <span style="font-size:12px;color:#b91c1c;display:inline-block;margin-top:6px;font-weight:700">⏱️ Valid for ${expiresInMins} minutes</span>
+            </div>
+            <div style="background:#fffbeb;border-left:4px solid #d97706;padding:12px 14px;border-radius:6px;margin-bottom:20px;font-size:13px;color:#92400e;line-height:1.5">
+              ⚠️ <b>Security Alert:</b> If you did not request a password reset, someone may be attempting to access your account. Do not share this code.
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+      `
     };
   },
 

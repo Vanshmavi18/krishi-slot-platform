@@ -4,77 +4,84 @@ export class AuthModal {
   constructor(api, onLoginSuccess) {
     this.api = api;
     this.onLoginSuccess = onLoginSuccess;
-    this.activeTab = 'farmer'; // 'farmer' | 'admin' | 'buyer'
-    this.authMode = 'otp'; // 'otp' | 'password'
-    this.step = 'email'; // 'email' | 'otp'
-    this.currentEmail = '';
-    this.demoOtp = '';
+    this.modalMode = 'login'; // 'login' | 'signup' | 'forgot'
+    
+    // Login state
+    this.activeTab = 'farmer'; // 'farmer' | 'buyer' | 'admin'
+    this.loginIdentifier = '';
+    this.loginPassword = '';
+    this.showLoginPwd = false;
+
+    // Signup multi-step wizard state
+    // Step 1: Enter Gmail
+    // Step 2: Verify Gmail OTP
+    // Step 3: Choose unique username & set password
+    // Step 4: Account created successfully -> redirect to Login
+    this.signupStep = 1;
+    this.signupEmail = '';
+    this.signupOtp = '';
+    this.signupToken = '';
+    this.signupUsername = '';
+    this.signupFullName = '';
+    this.signupPhone = '';
+    this.signupPassword = '';
+    this.signupConfirmPassword = '';
+    this.signupRole = 'farmer'; // 'farmer' | 'buyer'
+    this.signupVillage = '';
+    this.signupAcres = '';
+    this.signupCompany = '';
+    this.signupLicense = '';
+    this.showSignupPwd = false;
+    this.usernameStatus = null; // { available: boolean, message: string }
+
+    // Forgot Password multi-step wizard state
+    // Step 1: Enter Gmail
+    // Step 2: Verify OTP
+    // Step 3: Create New Password
+    // Step 4: Password reset successfully -> redirect to Login
+    this.forgotStep = 1;
+    this.forgotEmail = '';
+    this.forgotOtp = '';
+    this.forgotToken = '';
+    this.forgotPassword = '';
+    this.forgotConfirmPassword = '';
+    this.showForgotPwd = false;
+
+    // General state
     this.error = null;
     this.successMessage = null;
     this.isLoading = false;
-    this.isRealEmail = false;
-    this.emailConfig = null;
-    this.backupOtp = null;
-    this.emailSent = true;
-    this.showBackupCode = false;
-
-    // Password visibility toggles
-    this.showLoginPwd = false;
-    this.showSavePwd = false;
-    this.showAdminPwd = false;
-    this.showBuyerPwd = false;
-
-    // Countdown timer for OTP
     this.countdownSeconds = 0;
     this.timerInterval = null;
-
-    // Saved credentials in localStorage
-    this.farmerSaved = this.api.getSavedCredential('farmer');
-    this.buyerSaved = this.api.getSavedCredential('buyer');
-    this.adminSaved = this.api.getSavedCredential('admin');
   }
 
-  async open(defaultTab = 'farmer') {
+  open(defaultTab = 'farmer', mode = 'login') {
+    this.modalMode = mode;
     this.activeTab = defaultTab;
-    this.step = 'email';
     this.error = null;
     this.successMessage = null;
     this.isLoading = false;
-    this.isRealEmail = false;
-    this.backupOtp = null;
-    this.emailSent = true;
-    this.showBackupCode = false;
     this.clearIntervalTimer();
 
-    this.farmerSaved = this.api.getSavedCredential('farmer');
-    this.buyerSaved = this.api.getSavedCredential('buyer');
-    this.adminSaved = this.api.getSavedCredential('admin');
-
-    if (defaultTab === 'farmer') {
-      if (this.farmerSaved?.password) {
-        this.currentEmail = this.farmerSaved.email || '';
-        this.authMode = 'password';
-      } else {
-        this.currentEmail = this.farmerSaved?.email || '';
-        this.authMode = 'otp';
-      }
-    } else if (defaultTab === 'admin') {
-      this.currentEmail = this.adminSaved?.identifier || 'admin@agriqueue.in';
-      this.authMode = 'password';
-    } else if (defaultTab === 'buyer') {
-      this.currentEmail = this.buyerSaved?.identifier || 'buyer@agrocorp.in';
-      this.authMode = 'password';
+    if (mode === 'signup') {
+      this.signupStep = 1;
+      this.signupEmail = '';
+      this.signupOtp = '';
+      this.signupToken = '';
+      this.signupUsername = '';
+      this.signupPassword = '';
+      this.signupConfirmPassword = '';
+      this.usernameStatus = null;
+    } else if (mode === 'forgot') {
+      this.forgotStep = 1;
+      this.forgotEmail = '';
+      this.forgotOtp = '';
+      this.forgotToken = '';
+      this.forgotPassword = '';
+      this.forgotConfirmPassword = '';
     }
 
     this.render();
-
-    // Check live gateway status from server
-    try {
-      this.emailConfig = await this.api.getEmailStatus();
-      this.render();
-    } catch {
-      // ignore
-    }
   }
 
   close() {
@@ -90,84 +97,70 @@ export class AuthModal {
     }
   }
 
-  startResendTimer(seconds = 60) {
+  startResendTimer(seconds = 60, targetDisplayId = 'auth-timer-display', btnId = 'btn-resend-otp') {
     this.clearIntervalTimer();
     this.countdownSeconds = seconds;
     this.timerInterval = setInterval(() => {
       this.countdownSeconds--;
-      const timerSpan = document.getElementById('auth-timer-display');
-      const resendBtn = document.getElementById('btn-resend-email-otp');
+      const timerSpan = document.getElementById(targetDisplayId);
+      const resendBtn = document.getElementById(btnId);
       if (timerSpan) {
-        timerSpan.textContent = `(${this.countdownSeconds}s)`;
+        timerSpan.textContent = this.countdownSeconds > 0 ? `(${this.countdownSeconds}s)` : '';
       }
       if (this.countdownSeconds <= 0) {
         this.clearIntervalTimer();
-        if (timerSpan) timerSpan.textContent = '';
         if (resendBtn) resendBtn.removeAttribute('disabled');
       }
     }, 1000);
   }
 
-  // --- DUAL FAST OTP FLOW (PHONE / EMAIL) ---
-  async handleSendOtp(targetOverride = null) {
+  // ============================================================================
+  // SIGNUP FLOW ACTIONS
+  // ============================================================================
+
+  // Step 1 -> Step 2: Send OTP to Gmail
+  async handleSendSignupOtp() {
     if (this.isLoading) return;
 
-    const input = document.getElementById('auth-email-input');
-    const raw = (targetOverride || (input ? input.value : '')).trim();
+    const emailInp = document.getElementById('signup-email-input');
+    const rawEmail = (emailInp ? emailInp.value : '').trim();
 
-    if (!raw) {
-      this.error = 'Please enter your Mobile Number (10 digits) or Gmail / Email address.';
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!rawEmail || !emailRegex.test(rawEmail)) {
+      this.error = 'Please enter a valid Gmail / Email address (e.g. yourname@gmail.com).';
       this.render();
       return;
     }
 
-    const cleanDigits = raw.replace(/\D/g, '');
-    const isPhone = !raw.includes('@') && cleanDigits.length === 10;
-    const isEmail = raw.includes('@') && raw.length >= 5;
-
-    if (!isPhone && !isEmail) {
-      this.error = 'Please enter a valid 10-digit Indian mobile number or email address.';
-      this.render();
-      return;
-    }
-
-    const cleanTarget = isPhone ? cleanDigits.slice(-10) : raw.toLowerCase();
-    this.currentEmail = cleanTarget;
-    this.isPhoneAuth = isPhone;
+    this.signupEmail = rawEmail.toLowerCase();
     this.isLoading = true;
     this.error = null;
+    this.successMessage = null;
     this.render();
 
     try {
-      const res = isPhone ? await this.api.sendOtp(cleanTarget) : await this.api.sendEmailOtp(cleanTarget);
+      const res = await this.api.sendSignupOtp(this.signupEmail);
       this.isLoading = false;
-      this.isRealEmail = Boolean(res.isRealEmail);
-      this.emailSent = res.emailSent !== false;
-      this.backupOtp = null;
-      this.showBackupCode = false;
-      this.step = 'otp';
-      this.successMessage = isPhone
-        ? `Verification code dispatched to +91 ${cleanTarget}. Check your SMS.`
-        : `Verification code sent to your Gmail (${cleanTarget}). Please check your inbox.`;
+      this.signupStep = 2;
+      this.successMessage = res.message || 'OTP sent to your email';
       this.render();
-      this.startResendTimer(30);
+      this.startResendTimer(60, 'signup-timer-display', 'btn-resend-signup-otp');
     } catch (err) {
       this.isLoading = false;
-      this.error = err.message || 'Failed to dispatch verification code.';
+      this.error = err.message || 'Failed to send OTP. Please try again.';
       this.render();
     }
   }
 
-  async handleVerifyOtp() {
-    const otpInput = document.getElementById('auth-otp-input');
-    const otp = otpInput ? otpInput.value.trim() : '';
-    const newPwdInput = document.getElementById('auth-save-pwd-input');
-    const savePassword = newPwdInput ? newPwdInput.value.trim() : '';
-    const rememberCheckbox = document.getElementById('auth-save-pwd-remember');
-    const remember = rememberCheckbox ? rememberCheckbox.checked : true;
+  // Step 2 -> Step 3: Verify OTP
+  async handleVerifySignupOtp() {
+    if (this.isLoading) return;
 
-    if (!otp || otp.length < 4) {
-      this.error = 'Please enter the 6-digit verification code.';
+    const otpInp = document.getElementById('signup-otp-input');
+    const otp = otpInp ? otpInp.value.trim() : '';
+
+    if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+      this.error = 'Please enter the valid 6-digit OTP sent to your email.';
       this.render();
       return;
     }
@@ -177,47 +170,214 @@ export class AuthModal {
     this.render();
 
     try {
-      const res = this.isPhoneAuth 
-        ? await this.api.verifyOtp(this.currentEmail, otp, savePassword || null)
-        : await this.api.verifyEmailOtp(this.currentEmail, otp, savePassword || null);
+      const res = await this.api.verifySignupOtp(this.signupEmail, otp);
       this.isLoading = false;
+      this.signupToken = res.signupToken;
+      this.signupStep = 3;
+      this.successMessage = 'Email verified successfully! Now choose your unique username & password.';
+      this.render();
+    } catch (err) {
+      this.isLoading = false;
+      this.error = err.message || 'Invalid OTP. Please check and try again.';
+      this.render();
+    }
+  }
 
-      if (savePassword && remember) {
-        this.api.setSavedCredential(this.activeTab, {
-          email: this.currentEmail,
-          identifier: this.currentEmail,
-          password: savePassword
-        });
+  // Real-time or on-blur username availability check
+  async handleCheckUsername(username) {
+    const clean = String(username || '').trim().toLowerCase();
+    if (!clean || clean.length < 3) {
+      this.usernameStatus = null;
+      return;
+    }
+
+    try {
+      const res = await this.api.checkUsername(clean);
+      this.usernameStatus = res;
+      const statusEl = document.getElementById('username-availability-badge');
+      if (statusEl) {
+        if (res.available) {
+          statusEl.innerHTML = `<span style="color:#15803d;font-weight:700">✅ ${res.message}</span>`;
+        } else {
+          statusEl.innerHTML = `<span style="color:#dc2626;font-weight:700">❌ ${res.error || res.message}</span>`;
+        }
       }
+    } catch {
+      // ignore network glitch on blur
+    }
+  }
 
+  // Step 4 & 5: Create Account in MongoDB
+  async handleCompleteSignup() {
+    if (this.isLoading) return;
+
+    const usernameInp = document.getElementById('signup-username-input');
+    const nameInp = document.getElementById('signup-fullname-input');
+    const phoneInp = document.getElementById('signup-phone-input');
+    const pwdInp = document.getElementById('signup-pwd-input');
+    const confirmPwdInp = document.getElementById('signup-confirm-pwd-input');
+    const villageInp = document.getElementById('signup-village-input');
+    const acresInp = document.getElementById('signup-acres-input');
+    const companyInp = document.getElementById('signup-company-input');
+    const licenseInp = document.getElementById('signup-license-input');
+
+    const username = usernameInp ? usernameInp.value.trim().toLowerCase() : '';
+    const name = nameInp ? nameInp.value.trim() : '';
+    const phone = phoneInp ? phoneInp.value.replace(/\D/g, '').slice(-10) : '';
+    const password = pwdInp ? pwdInp.value : '';
+    const confirmPassword = confirmPwdInp ? confirmPwdInp.value : '';
+
+    // Validations
+    if (!username) {
+      this.error = 'Please enter a username.';
+      this.render();
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      this.error = 'Username must be 3-20 characters long and contain only letters, numbers, and underscores.';
+      this.render();
+      return;
+    }
+
+    if (!password || password.length < 8) {
+      this.error = 'Password must be at least 8 characters long.';
+      this.render();
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      this.error = 'Confirm password must match the password.';
+      this.render();
+      return;
+    }
+
+    const payload = {
+      signupToken: this.signupToken,
+      username,
+      name: name || username,
+      phone: phone || '',
+      password,
+      confirmPassword,
+      role: this.signupRole || 'farmer',
+      village: villageInp ? villageInp.value.trim() : '',
+      landAcres: acresInp ? Number(acresInp.value) : 0,
+      company: companyInp ? companyInp.value.trim() : '',
+      mandiLicense: licenseInp ? licenseInp.value.trim() : ''
+    };
+
+    this.isLoading = true;
+    this.error = null;
+    this.successMessage = null;
+    this.render();
+
+    try {
+      const res = await this.api.signup(payload);
+      this.isLoading = false;
+      this.signupStep = 4;
+      this.successMessage = 'Account created successfully';
+      this.render();
+
+      // Automatically redirect to Login after 2 seconds
+      setTimeout(() => {
+        this.modalMode = 'login';
+        this.loginIdentifier = username;
+        this.successMessage = 'Account created successfully! Please login with your new credentials.';
+        this.error = null;
+        this.render();
+      }, 2000);
+    } catch (err) {
+      this.isLoading = false;
+      this.error = err.message || 'Account creation failed. Please check your details.';
+      this.render();
+    }
+  }
+
+  // ============================================================================
+  // LOGIN FLOW ACTIONS (Username OR Gmail + Password)
+  // ============================================================================
+
+  async handleLogin() {
+    if (this.isLoading) return;
+
+    const identInp = document.getElementById('login-ident-input');
+    const pwdInp = document.getElementById('login-pwd-input');
+    const identifier = identInp ? identInp.value.trim() : '';
+    const password = pwdInp ? pwdInp.value : '';
+
+    if (!identifier || !password) {
+      this.error = 'Please enter both your Username/Email and password.';
+      this.render();
+      return;
+    }
+
+    this.isLoading = true;
+    this.error = null;
+    this.successMessage = null;
+    this.render();
+
+    try {
+      const res = await this.api.login(identifier, password);
+      this.isLoading = false;
       this.close();
-      if (this.onLoginSuccess) this.onLoginSuccess(res.user);
+      if (this.onLoginSuccess) {
+        this.onLoginSuccess(res.user);
+      }
     } catch (err) {
       this.isLoading = false;
-      this.error = err.message || 'Verification failed. Please check the code.';
+      // Exact requirement: "Invalid username/email or password"
+      this.error = err.message || 'Invalid username/email or password';
       this.render();
     }
   }
 
-  // --- PASSWORD LOGIN (FARMER / BUYER / ADMIN) ---
-  async handlePasswordLogin() {
-    const identInput = document.getElementById('auth-pwd-ident-input');
-    const pwdInput = document.getElementById('auth-pwd-input');
-    const identifier = identInput ? identInput.value.trim() : '';
-    const password = pwdInput ? pwdInput.value : '';
-    const rememberCheckbox = document.getElementById('auth-remember-password-checkbox');
-    const remember = rememberCheckbox ? rememberCheckbox.checked : true;
+  // ============================================================================
+  // FORGOT PASSWORD FLOW ACTIONS
+  // ============================================================================
 
-    if (!identifier) {
-      this.error = this.activeTab === 'farmer' 
-        ? 'Please enter your registered email.' 
-        : 'Please enter your ID or Email.';
+  // Step 1 -> Step 2: Send Reset OTP
+  async handleSendResetOtp() {
+    if (this.isLoading) return;
+
+    const emailInp = document.getElementById('forgot-email-input');
+    const rawEmail = (emailInp ? emailInp.value : '').trim();
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!rawEmail || !emailRegex.test(rawEmail)) {
+      this.error = 'Please enter your registered Gmail / Email address.';
       this.render();
       return;
     }
 
-    if (!password) {
-      this.error = 'Please enter your password.';
+    this.forgotEmail = rawEmail.toLowerCase();
+    this.isLoading = true;
+    this.error = null;
+    this.successMessage = null;
+    this.render();
+
+    try {
+      const res = await this.api.sendResetOtp(this.forgotEmail);
+      this.isLoading = false;
+      this.forgotStep = 2;
+      this.successMessage = res.message || 'OTP sent to your email';
+      this.render();
+      this.startResendTimer(60, 'forgot-timer-display', 'btn-resend-forgot-otp');
+    } catch (err) {
+      this.isLoading = false;
+      this.error = err.message || 'Failed to send OTP. Please check your email.';
+      this.render();
+    }
+  }
+
+  // Step 2 -> Step 3: Verify Reset OTP
+  async handleVerifyResetOtp() {
+    if (this.isLoading) return;
+
+    const otpInp = document.getElementById('forgot-otp-input');
+    const otp = otpInp ? otpInp.value.trim() : '';
+
+    if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+      this.error = 'Please enter the valid 6-digit OTP sent to your email.';
       this.render();
       return;
     }
@@ -227,37 +387,74 @@ export class AuthModal {
     this.render();
 
     try {
-      let res;
-      if (this.activeTab === 'admin') {
-        res = await this.api.loginStaff(identifier, password);
-      } else if (this.activeTab === 'buyer') {
-        res = await this.api.loginBuyer(identifier, password);
-      } else {
-        res = await this.api.loginWithEmailPassword(identifier, password);
-      }
-
+      const res = await this.api.verifyResetOtp(this.forgotEmail, otp);
       this.isLoading = false;
-
-      if (remember) {
-        this.api.setSavedCredential(this.activeTab, {
-          email: identifier,
-          identifier,
-          password
-        });
-      } else {
-        this.api.setSavedCredential(this.activeTab, null);
-      }
-
-      this.close();
-      if (this.onLoginSuccess) this.onLoginSuccess(res.user);
+      this.forgotToken = res.resetToken;
+      this.forgotStep = 3;
+      this.successMessage = 'OTP verified successfully. Please enter your new password.';
+      this.render();
     } catch (err) {
       this.isLoading = false;
-      this.error = err.message || 'Login failed. Please check your credentials.';
+      this.error = err.message || 'Invalid OTP. Please try again.';
       this.render();
     }
   }
 
-  // --- 1-CLICK INSTANT DEMO ---
+  // Step 3 -> Step 4: Reset Password
+  async handleResetPasswordSubmit() {
+    if (this.isLoading) return;
+
+    const pwdInp = document.getElementById('forgot-new-pwd-input');
+    const confirmPwdInp = document.getElementById('forgot-confirm-pwd-input');
+    const newPassword = pwdInp ? pwdInp.value : '';
+    const confirmNewPassword = confirmPwdInp ? confirmPwdInp.value : '';
+
+    if (!newPassword || newPassword.length < 8) {
+      this.error = 'New password must be at least 8 characters long.';
+      this.render();
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      this.error = 'Confirm password must match the new password.';
+      this.render();
+      return;
+    }
+
+    this.isLoading = true;
+    this.error = null;
+    this.successMessage = null;
+    this.render();
+
+    try {
+      const res = await this.api.resetPassword({
+        email: this.forgotEmail,
+        resetToken: this.forgotToken,
+        newPassword,
+        confirmNewPassword
+      });
+
+      this.isLoading = false;
+      this.forgotStep = 4;
+      this.successMessage = res.message || 'Password reset successfully';
+      this.render();
+
+      // Redirect to login after 2 seconds
+      setTimeout(() => {
+        this.modalMode = 'login';
+        this.loginIdentifier = this.forgotEmail;
+        this.successMessage = 'Password reset successfully! Please log in with your new password.';
+        this.error = null;
+        this.render();
+      }, 2000);
+    } catch (err) {
+      this.isLoading = false;
+      this.error = err.message || 'Failed to reset password. Please try again.';
+      this.render();
+    }
+  }
+
+  // Quick Demo Login for instant evaluation
   async handleQuickDemo(role) {
     this.isLoading = true;
     this.error = null;
@@ -270,319 +467,95 @@ export class AuthModal {
       if (this.onLoginSuccess) this.onLoginSuccess(res.user);
     } catch (err) {
       this.isLoading = false;
-      this.error = err.message || 'Instant login failed';
+      this.error = err.message || 'Quick login failed.';
       this.render();
     }
   }
 
+  // ============================================================================
+  // VIEW RENDERING
+  // ============================================================================
+
   render() {
-    let container = document.getElementById('auth-modal-root');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'auth-modal-root';
-      document.body.appendChild(container);
+    let root = document.getElementById('auth-modal-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'auth-modal-root';
+      document.body.appendChild(root);
     }
 
-    const savedFarmer = this.api.getSavedCredential('farmer');
-    const savedBuyer = this.api.getSavedCredential('buyer');
-    const savedAdmin = this.api.getSavedCredential('admin');
+    const isLogin = this.modalMode === 'login';
+    const isSignup = this.modalMode === 'signup';
+    const isForgot = this.modalMode === 'forgot';
 
-    // Identifiers for the active tab (no hardcoded passwords)
-    let defaultIdent = '';
-    let defaultPwd = '';
-    if (this.activeTab === 'farmer') {
-      defaultIdent = savedFarmer?.email || savedFarmer?.identifier || this.currentEmail || '';
-    } else if (this.activeTab === 'admin') {
-      defaultIdent = savedAdmin?.identifier || '';
-    } else {
-      defaultIdent = savedBuyer?.identifier || '';
+    let headerTitle = 'AgriQueue Official Gateway';
+    let headerSubtitle = 'Sign in to access APMC slot booking & mandi operations.';
+
+    if (isSignup) {
+      headerTitle = 'Create Your AgriQueue Account';
+      headerSubtitle = 'Step-by-step verified registration for farmers & buyers.';
+    } else if (isForgot) {
+      headerTitle = 'Reset Forgotten Password';
+      headerSubtitle = 'Secure OTP-verified password recovery.';
     }
 
-    container.innerHTML = `
-      <div class="modal-backdrop">
-        <div class="modal-window auth-modal-box">
-          <button id="modal-close" class="modal-close-btn" aria-label="Close modal">✕</button>
-
-          <!-- Modal Brand Header -->
-          <div class="auth-brand-header">
-            <div class="auth-brand-icon">🌱</div>
-            <h2 class="auth-brand-title">AgriQueue Login</h2>
-            <p class="auth-brand-subtitle">Smart Mandi Slot Booking & Unified Procurement</p>
-          </div>
-
-          <!-- 3 Role Tabs -->
-          <div class="auth-role-tabs">
-            <button id="tab-farmer" class="auth-tab-btn ${this.activeTab === 'farmer' ? 'active' : ''}">
-              🌾 Farmer
-            </button>
-            <button id="tab-admin" class="auth-tab-btn ${this.activeTab === 'admin' ? 'active' : ''}">
-              🛡️ Admin
-            </button>
-            <button id="tab-buyer" class="auth-tab-btn ${this.activeTab === 'buyer' ? 'active' : ''}">
-              🛒 Buyer
-            </button>
-          </div>
-
-          <!-- Feedback Alerts -->
-          ${this.error ? `
-            <div class="auth-alert error">
-              <span>⚠️</span>
-              <span style="flex:1">${this.error}</span>
-            </div>
-          ` : ''}
-
-          ${this.successMessage ? `
-            <div class="auth-alert success">
-              <span>✅</span>
-              <span style="flex:1">${this.successMessage}</span>
-            </div>
-          ` : ''}
-
-          <!-- Role Description Banner -->
-          <div class="auth-role-header">
-            <strong>${
-              this.activeTab === 'farmer' ? '🌾 Farmer / Crop Seller Portal' :
-              this.activeTab === 'admin' ? '🛡️ APMC Admin & Mandi Command' :
-              '🛒 Commercial Buyer & Trader Portal'
-            }</strong>
-            <span>${
-              this.activeTab === 'farmer' ? 'Book slots, track real-time queue, J-Forms & DBT payments' :
-              this.activeTab === 'admin' ? 'Manage procurement centres, call tokens & weighment assays' :
-              'Browse arrival lots, place verified bids & download gate passes'
-            }</span>
-          </div>
-
-          <!-- Real Gmail Gateway Status Badge -->
-          ${this.emailConfig?.configured ? `
-            <div class="auth-gateway-badge active" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:9px 12px;font-size:12px;color:#1e40af;margin-bottom:14px;display:flex;align-items:center;gap:8px">
-              <span style="font-size:16px">🟢</span>
+    root.innerHTML = `
+      <div class="modal-backdrop active" id="auth-backdrop" style="background:rgba(10, 25, 15, 0.85);backdrop-filter:blur(8px);z-index:99999;padding:16px;display:flex;align-items:center;justify-content:center;position:fixed;inset:0;overflow-y:auto">
+        <div class="auth-modal-card" style="background:#ffffff;color:#0f172a;max-width:540px;width:100%;margin:auto;padding:0;overflow:hidden;border-radius:22px;box-shadow:0 30px 80px -15px rgba(0,0,0,0.65), 0 0 0 2px #10b981;border:1px solid #cbd5e1;position:relative">
+          
+          <!-- Top Modal Header -->
+          <div style="background:linear-gradient(135deg, #064e3b 0%, #15803d 100%);padding:24px 28px;color:#ffffff;position:relative">
+            <button id="btn-close-auth-modal" style="position:absolute;top:18px;right:18px;background:rgba(255,255,255,0.25);border:none;color:#ffffff;width:34px;height:34px;border-radius:50%;cursor:pointer;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:background 0.2s" title="Close">✕</button>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+              <span style="font-size:28px">🌱</span>
               <div>
-                <b>Live Gmail Gateway Active:</b> Real OTP will be sent to your Gmail inbox from <code>${this.emailConfig.senderEmail}</code>.
+                <span style="font-size:20px;font-weight:900;letter-spacing:-0.02em;color:#ffffff;display:block">${headerTitle}</span>
+                <span style="font-size:12px;font-weight:600;color:#86efac;text-transform:uppercase;letter-spacing:0.06em">Official Authentication Gateway</span>
               </div>
             </div>
-          ` : `
-            <div class="auth-gateway-badge demo" style="background:#fefce8;border:1px solid #fef08a;border-radius:10px;padding:9px 12px;font-size:12px;color:#854d0e;margin-bottom:14px;display:flex;align-items:center;gap:8px">
-              <span style="font-size:16px">💡</span>
-              <div>
-                <b>Real Gmail Delivery:</b> Set <code>GMAIL_USER</code> & <code>GMAIL_APP_PASSWORD</code> in <code>.env</code> for live inbox delivery.
-              </div>
-            </div>
-          `}
+            <p style="margin:0;font-size:14px;color:#ecfdf5;opacity:0.95;line-height:1.5">
+              ${headerSubtitle}
+            </p>
 
-          <!-- Mode Switcher: Fast OTP vs Password -->
-          <div class="auth-mode-switch">
-            <button id="mode-pill-otp" class="auth-mode-pill ${this.authMode === 'otp' ? 'active' : ''}">
-              ⚡ Fast OTP Login (Mobile / Email)
-            </button>
-            <button id="mode-pill-password" class="auth-mode-pill ${this.authMode === 'password' ? 'active' : ''}">
-              🔑 Password Login
-            </button>
+            ${!isForgot ? `
+              <!-- Mode Switcher: Login vs Sign Up -->
+              <div style="display:flex;gap:8px;margin-top:18px;background:rgba(0,0,0,0.35);padding:5px;border-radius:12px">
+                <button 
+                  id="tab-toggle-login" 
+                  type="button"
+                  style="flex:1;padding:10px 14px;border:none;border-radius:9px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;background:${isLogin ? '#ffffff' : 'transparent'};color:${isLogin ? '#064e3b' : '#ffffff'};box-shadow:${isLogin ? '0 4px 12px rgba(0,0,0,0.25)' : 'none'}"
+                >
+                  🌾 Login (लॉग इन)
+                </button>
+                <button 
+                  id="tab-toggle-signup" 
+                  type="button"
+                  style="flex:1;padding:10px 14px;border:none;border-radius:9px;font-weight:800;font-size:14px;cursor:pointer;transition:all 0.2s;background:${isSignup ? '#ffffff' : 'transparent'};color:${isSignup ? '#064e3b' : '#ffffff'};box-shadow:${isSignup ? '0 4px 12px rgba(0,0,0,0.25)' : 'none'}"
+                >
+                  ✨ Sign Up (नया खाता)
+                </button>
+              </div>
+            ` : ''}
           </div>
 
-          <!-- ========================================== -->
-          <!-- MODE 1: FAST OTP FLOW (PHONE / EMAIL)      -->
-          <!-- ========================================== -->
-          ${this.authMode === 'otp' ? `
-            ${this.step === 'email' ? `
-              <!-- Step A: Enter Mobile or Email -->
-              <form id="email-otp-send-form" action="#" onsubmit="return false;">
-                <div class="form-field">
-                  <label for="auth-email-input">
-                    Your Real Gmail Address / रजिस्टर्ड ईमेल
-                  </label>
-                  <div class="auth-input-icon-wrapper">
-                    <span class="auth-input-icon">✉️</span>
-                    <input 
-                      id="auth-email-input" 
-                      name="email"
-                      type="text" 
-                      value="${this.currentEmail || ''}" 
-                      placeholder="Enter your Gmail address (e.g. name@gmail.com)" 
-                      autocomplete="username"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div class="auth-info-note" style="background:#eff6ff;border-left:3px solid #2563eb;padding:9px 12px;border-radius:6px;font-size:12px;color:#1e40af">
-                  📬 <b>Live Gmail Inbox Delivery:</b> Enter your Gmail address to receive your official 6-digit OTP directly in your Gmail inbox within 10 seconds!
-                </div>
-
-                <button id="btn-submit-email" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
-                  ${this.isLoading ? '⏳ Sending OTP to Gmail...' : 'Send OTP to Gmail / ओटीपी भेजें →'}
-                </button>
-
-                <div class="auth-footer-link">
-                  <button type="button" id="btn-switch-to-pwd-mode" class="auth-link-btn">
-                    Already have a password? Login with Password →
-                  </button>
-                </div>
-              </form>
-            ` : `
-              <!-- Step B: Verify OTP Code -->
-              <form id="email-otp-verify-form" action="#" onsubmit="return false;">
-                <!-- Email Instructions Banner (NO OTP displayed on screen) -->
-                <div style="background:linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);border:1.5px solid #86efac;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px">
-                  <span style="font-size:26px;line-height:1">📬</span>
-                  <div style="flex:1">
-                    <div style="font-size:13.5px;font-weight:800;color:#166534;margin-bottom:2px">
-                      OTP Sent to Your ${this.isPhoneAuth ? 'Mobile SMS' : 'Gmail Inbox'}
-                    </div>
-                    <div style="font-size:12px;color:#15803d;font-weight:600;margin-bottom:6px">
-                      Sent to: <b>${this.isPhoneAuth ? `+91 ${this.currentEmail}` : this.currentEmail}</b>
-                    </div>
-                    <div style="font-size:12px;color:#374151;line-height:1.45">
-                      ${this.isPhoneAuth
-                        ? 'Please check your mobile SMS inbox for the 6-digit verification code and enter it below.'
-                        : `Please check your <b>Gmail inbox</b> (or <b>Spam/Junk</b> folder) for the code from <code>${this.emailConfig?.senderEmail || 'vanshmavi018@gmail.com'}</code>.`}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-field">
-                  <label for="auth-otp-input">
-                    Verification Code / सत्यापन कोड
-                  </label>
-                  <input 
-                    id="auth-otp-input" 
-                    name="otp"
-                    type="text" 
-                    placeholder="Enter 6-digit OTP from Gmail" 
-                    value=""
-                    maxlength="6" 
-                    class="auth-otp-field"
-                    autocomplete="one-time-code"
-                    autofocus
-                    required
-                  />
-                </div>
-
-                <!-- Optional Save Password -->
-                <div class="auth-save-box">
-                  <div class="auth-save-header">
-                    <span>🔒 Set / Remember Password (Optional)</span>
-                  </div>
-                  <p style="font-size:11.5px;color:#64748b;margin-bottom:8px">
-                    Save a password to login instantly next time without waiting for an SMS/email code!
-                  </p>
-                  <div class="auth-pwd-wrapper">
-                    <input 
-                      id="auth-save-pwd-input" 
-                      name="new-password"
-                      type="${this.showSavePwd ? 'text' : 'password'}" 
-                      placeholder="Create password (e.g. farmer123)" 
-                      autocomplete="new-password"
-                      value="${savedFarmer?.password || ''}"
-                    />
-                    <button type="button" id="btn-toggle-save-pwd" class="auth-eye-btn" title="Toggle visibility">
-                      ${this.showSavePwd ? '🙈' : '👁️'}
-                    </button>
-                  </div>
-                  <label class="auth-checkbox-row">
-                    <input id="auth-save-pwd-remember" type="checkbox" checked />
-                    <span>Remember credentials on this device</span>
-                  </label>
-                </div>
-
-                <button id="btn-submit-otp" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
-                  ${this.isLoading ? '⏳ Verifying Code...' : 'Verify OTP & Enter / सत्यापित करें →'}
-                </button>
-
-                <div class="auth-verify-actions">
-                  <button type="button" id="btn-back-email" class="auth-link-btn" style="color:#64748b">
-                    ← Change ${this.isPhoneAuth ? 'Number' : 'Email'}
-                  </button>
-                  <button type="button" id="btn-resend-email-otp" class="auth-link-btn" ${this.countdownSeconds > 0 ? 'disabled' : ''}>
-                    Resend Code <span id="auth-timer-display">${this.countdownSeconds > 0 ? `(${this.countdownSeconds}s)` : ''}</span>
-                  </button>
-                </div>
-              </form>
-            `}
-          ` : `
-            <!-- ========================================== -->
-            <!-- MODE 2: PASSWORD LOGIN FLOW                 -->
-            <!-- ========================================== -->
-            <form id="password-login-form" action="#" onsubmit="return false;">
-              <div class="form-field">
-                <label for="auth-pwd-ident-input">
-                  ${this.activeTab === 'farmer' ? 'Registered Email / ईमेल पता' :
-                    this.activeTab === 'admin' ? 'Staff ID or Admin Email' :
-                    'Buyer ID or Commercial Email'}
-                </label>
-                <div class="auth-input-icon-wrapper">
-                  <span class="auth-input-icon">👤</span>
-                  <input 
-                    id="auth-pwd-ident-input" 
-                    name="username"
-                    type="${this.activeTab === 'farmer' ? 'email' : 'text'}" 
-                    value="${defaultIdent}" 
-                    placeholder="${
-                      this.activeTab === 'farmer' ? 'ramesh.farmer@agriqueue.in' :
-                      this.activeTab === 'admin' ? 'APMC-ADMIN or admin@agriqueue.in' :
-                      'BUYER-01 or buyer@agrocorp.in'
-                    }" 
-                    autocomplete="username"
-                    required
-                  />
-                </div>
+          <div class="auth-body" style="background:#ffffff;color:#0f172a;padding:26px 28px">
+            <!-- Global Feedback Alerts -->
+            ${this.error ? `
+              <div class="auth-error-banner" style="background:#fef2f2;border:2px solid #ef4444;color:#991b1b;padding:14px 16px;border-radius:12px;font-size:14px;font-weight:700;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 2px 8px rgba(239,68,68,0.15)">
+                <span style="font-size:18px">⚠️</span>
+                <span style="flex:1;line-height:1.4">${this.error}</span>
               </div>
+            ` : ''}
 
-              <div class="form-field">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                  <label for="auth-pwd-input" style="margin:0">Password / पासवर्ड</label>
-                  <button type="button" id="btn-switch-to-otp-reset" class="auth-link-btn" style="font-size:11.5px">
-                    Forgot Password? Login with OTP
-                  </button>
-                </div>
-                <div class="auth-pwd-wrapper">
-                  <input 
-                    id="auth-pwd-input" 
-                    name="password"
-                    type="${this.showLoginPwd ? 'text' : 'password'}" 
-                    value="" 
-                    placeholder="Enter your password" 
-                    autocomplete="current-password"
-                    required
-                  />
-                  <button type="button" id="btn-toggle-login-pwd" class="auth-eye-btn" title="Toggle visibility">
-                    ${this.showLoginPwd ? '🙈' : '👁️'}
-                  </button>
-                </div>
+            ${this.successMessage ? `
+              <div style="background:#f0fdf4;border:2px solid #22c55e;color:#166534;padding:14px 16px;border-radius:12px;font-size:14px;font-weight:700;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 2px 8px rgba(34,197,94,0.15)">
+                <span style="font-size:18px">✅</span>
+                <span style="flex:1;line-height:1.4">${this.successMessage}</span>
               </div>
+            ` : ''}
 
-              <div style="margin-bottom:14px">
-                <label class="auth-checkbox-row">
-                  <input id="auth-remember-password-checkbox" type="checkbox" checked />
-                  <span>Remember me on this device</span>
-                </label>
-              </div>
-
-              <button id="btn-submit-pwd-login" type="submit" class="cta auth-submit-btn" ${this.isLoading ? 'disabled' : ''}>
-                ${this.isLoading ? '⏳ Authenticating...' : 'Login with Password →'}
-              </button>
-
-              <div class="auth-footer-link">
-                <button type="button" id="btn-switch-to-otp-mode" class="auth-link-btn">
-                  ← Or Login using 1-Time Email OTP Code
-                </button>
-              </div>
-            </form>
-          `}
-
-          <!-- 1-Click Demo Shortcut -->
-          <div class="auth-divider">
-            <div class="auth-divider-line"></div>
-            <span class="auth-divider-text">OR 1-CLICK INSTANT DEMO</span>
-            <div class="auth-divider-line"></div>
+            ${isSignup ? this.renderSignupView() : isForgot ? this.renderForgotView() : this.renderLoginView()}
           </div>
-
-          <button id="btn-quick-active-role" type="button" class="btn-secondary auth-quick-btn">
-            ⚡ Instant Login: ${
-              this.activeTab === 'farmer' ? 'Farmer Ramesh Kumar' :
-              this.activeTab === 'admin' ? 'APMC Director Dr. Alok Nath' :
-              'Commercial Buyer Vikram (AgroCorp)'
-            }
-          </button>
         </div>
       </div>
     `;
@@ -590,129 +563,707 @@ export class AuthModal {
     this.bindEvents();
   }
 
+  // ============================================================================
+  // 1. SIGNUP STEP-BY-STEP VIEW
+  // ============================================================================
+  renderSignupView() {
+    return `
+      <div>
+        <!-- Step Progress Indicator -->
+        <div style="margin-bottom:24px;background:#f8fafc;padding:12px 16px;border-radius:12px;border:1px solid #e2e8f0">
+          <div style="font-size:12px;font-weight:800;color:#047857;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">
+            Create Account • Step ${this.signupStep} of 4
+          </div>
+          <div style="display:flex;gap:6px">
+            <div style="flex:1;height:6px;border-radius:3px;background:${this.signupStep >= 1 ? '#10b981' : '#e2e8f0'}"></div>
+            <div style="flex:1;height:6px;border-radius:3px;background:${this.signupStep >= 2 ? '#10b981' : '#e2e8f0'}"></div>
+            <div style="flex:1;height:6px;border-radius:3px;background:${this.signupStep >= 3 ? '#10b981' : '#e2e8f0'}"></div>
+            <div style="flex:1;height:6px;border-radius:3px;background:${this.signupStep >= 4 ? '#10b981' : '#e2e8f0'}"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#64748b;margin-top:6px">
+            <span>1. Enter Gmail</span>
+            <span>2. Verify OTP</span>
+            <span>3. Choose Username</span>
+            <span>4. Done</span>
+          </div>
+        </div>
+
+        ${this.signupStep === 1 ? this.renderSignupStep1() : ''}
+        ${this.signupStep === 2 ? this.renderSignupStep2() : ''}
+        ${this.signupStep === 3 ? this.renderSignupStep3() : ''}
+        ${this.signupStep === 4 ? this.renderSignupStep4() : ''}
+      </div>
+    `;
+  }
+
+  // Signup Step 1: Ask for Gmail
+  renderSignupStep1() {
+    return `
+      <form id="signup-step1-form" onsubmit="return false;">
+        <div style="margin-bottom:18px">
+          <label for="signup-email-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:8px;display:block">
+            Gmail / Email Address <span style="color:#dc2626">*</span>
+          </label>
+          <input 
+            id="signup-email-input" 
+            type="email" 
+            placeholder="example@gmail.com" 
+            value="${this.signupEmail || ''}"
+            required 
+            style="width:100%;padding:14px 16px;border:2px solid #94a3b8;border-radius:10px;font-size:16px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+          />
+          <div style="font-size:12px;color:#64748b;margin-top:6px">
+            We will send a 6-digit verification code to this Gmail address.
+          </div>
+        </div>
+
+        <button 
+          type="button" 
+          id="btn-signup-step1-submit" 
+          style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45)"
+          ${this.isLoading ? 'disabled' : ''}
+        >
+          ${this.isLoading ? '<span class="pulse-dot"></span> Sending OTP...' : 'Send 6-Digit OTP →'}
+        </button>
+
+        <div style="margin-top:20px;text-align:center;font-size:14px;color:#334155;font-weight:600">
+          Already registered on AgriQueue? 
+          <button type="button" id="link-signup-to-login" style="background:none;border:none;color:#15803d;font-weight:800;cursor:pointer;text-decoration:underline;font-size:14px">
+            Log In
+          </button>
+        </div>
+      </form>
+    `;
+  }
+
+  // Signup Step 2: Verify OTP
+  renderSignupStep2() {
+    return `
+      <div>
+        <div style="background:#f0fdf4;padding:14px 16px;border-radius:12px;border:1.5px solid #bbf7d0;text-align:center;margin-bottom:20px">
+          <div style="font-size:13px;color:#166534;font-weight:700">OTP sent to your email</div>
+          <div style="font-size:16px;font-weight:900;color:#064e3b;margin-top:2px">${this.signupEmail}</div>
+        </div>
+
+        <form id="signup-step2-form" onsubmit="return false;">
+          <div style="margin-bottom:20px">
+            <label for="signup-otp-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:8px;display:block;text-align:center">
+              Enter 6-Digit OTP
+            </label>
+            <input 
+              id="signup-otp-input" 
+              type="text" 
+              maxlength="6" 
+              placeholder="••••••" 
+              required 
+              style="width:100%;padding:14px;border:2.5px solid #059669;border-radius:10px;font-size:26px;text-align:center;letter-spacing:10px;font-weight:900;color:#0f172a;background:#ffffff;box-sizing:border-box"
+            />
+          </div>
+
+          <button 
+            type="button" 
+            id="btn-signup-step2-submit" 
+            style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45)"
+            ${this.isLoading ? 'disabled' : ''}
+          >
+            ${this.isLoading ? '<span class="pulse-dot"></span> Verifying OTP...' : 'Verify OTP & Continue →'}
+          </button>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:13px;font-weight:700">
+            <button type="button" id="btn-back-to-step1" style="background:none;border:none;color:#64748b;cursor:pointer">
+              ← Change Email
+            </button>
+            <button type="button" id="btn-resend-signup-otp" style="background:none;border:none;color:#15803d;font-weight:800;cursor:pointer" ${this.countdownSeconds > 0 ? 'disabled' : ''}>
+              Resend OTP <span id="signup-timer-display"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  // Signup Step 3: Choose Username & Password
+  renderSignupStep3() {
+    const isFarmer = this.signupRole === 'farmer';
+    const isBuyer = this.signupRole === 'buyer';
+
+    return `
+      <div>
+        <form id="signup-step3-form" onsubmit="return false;">
+          <!-- Role Selection Tabs -->
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;display:block">
+              Registering As:
+            </label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <button 
+                type="button"
+                id="signup-role-farmer" 
+                style="padding:10px;font-size:13px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isFarmer ? '#ecfdf5' : '#ffffff'};color:${isFarmer ? '#065f46' : '#334155'};border:2px solid ${isFarmer ? '#059669' : '#cbd5e1'};box-shadow:${isFarmer ? '0 4px 12px rgba(5,150,105,0.2)' : 'none'}"
+              >
+                👨‍🌾 Farmer (किसान)
+              </button>
+              <button 
+                type="button"
+                id="signup-role-buyer" 
+                style="padding:10px;font-size:13px;font-weight:800;border-radius:10px;cursor:pointer;transition:all 0.15s;background:${isBuyer ? '#eff6ff' : '#ffffff'};color:${isBuyer ? '#1e40af' : '#334155'};border:2px solid ${isBuyer ? '#2563eb' : '#cbd5e1'};box-shadow:${isBuyer ? '0 4px 12px rgba(37,99,235,0.2)' : 'none'}"
+              >
+                🏢 Buyer (व्यापारी)
+              </button>
+            </div>
+          </div>
+
+          <!-- Unique Username Field -->
+          <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <label for="signup-username-input" style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:0">
+                Choose Unique Username <span style="color:#dc2626">*</span>
+              </label>
+              <span id="username-availability-badge" style="font-size:12px"></span>
+            </div>
+            <input 
+              id="signup-username-input" 
+              type="text" 
+              placeholder="e.g. vansh123" 
+              value="${this.signupUsername || ''}"
+              required 
+              style="width:100%;padding:12px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+            />
+            <div style="font-size:11px;color:#64748b;margin-top:4px">
+              3-20 characters (letters, numbers, underscore). Must be completely unique.
+            </div>
+          </div>
+
+          <!-- Password & Confirm Password Grid -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label for="signup-pwd-input" style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
+                Password (min 8) <span style="color:#dc2626">*</span>
+              </label>
+              <div style="position:relative">
+                <input 
+                  id="signup-pwd-input" 
+                  type="${this.showSignupPwd ? 'text' : 'password'}" 
+                  placeholder="••••••••" 
+                  required 
+                  style="width:100%;padding:12px 40px 12px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+                />
+                <button 
+                  type="button" 
+                  id="btn-toggle-signup-pwd" 
+                  style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#475569"
+                >
+                  ${this.showSignupPwd ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label for="signup-confirm-pwd-input" style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
+                Confirm Password <span style="color:#dc2626">*</span>
+              </label>
+              <input 
+                id="signup-confirm-pwd-input" 
+                type="${this.showSignupPwd ? 'text' : 'password'}" 
+                placeholder="••••••••" 
+                required 
+                style="width:100%;padding:12px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+              />
+            </div>
+          </div>
+
+          <!-- Full Name & Mobile -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <label for="signup-fullname-input" style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
+                Full Name
+              </label>
+              <input 
+                id="signup-fullname-input" 
+                type="text" 
+                placeholder="e.g. Ramesh Kumar" 
+                style="width:100%;padding:12px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:14px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+              />
+            </div>
+
+            <div>
+              <label for="signup-phone-input" style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
+                Mobile Number
+              </label>
+              <input 
+                id="signup-phone-input" 
+                type="tel" 
+                maxlength="10" 
+                placeholder="9876543210" 
+                style="width:100%;padding:12px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:14px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+              />
+            </div>
+          </div>
+
+          <!-- Role-specific optional inputs -->
+          ${isFarmer ? `
+            <div style="background:#f0fdf4;padding:12px;border-radius:10px;border:1.5px solid #bbf7d0;margin-bottom:16px">
+              <div style="font-size:11px;font-weight:800;color:#166534;text-transform:uppercase;margin-bottom:6px">Farmer Details (Optional)</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <input id="signup-village-input" type="text" placeholder="Village / District" style="width:100%;padding:9px 12px;border:1px solid #86efac;border-radius:8px;font-size:13px;box-sizing:border-box" />
+                <input id="signup-acres-input" type="number" step="0.5" placeholder="Land (Acres)" style="width:100%;padding:9px 12px;border:1px solid #86efac;border-radius:8px;font-size:13px;box-sizing:border-box" />
+              </div>
+            </div>
+          ` : `
+            <div style="background:#eff6ff;padding:12px;border-radius:10px;border:1.5px solid #bfdbfe;margin-bottom:16px">
+              <div style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;margin-bottom:6px">Commercial Buyer Details</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <input id="signup-company-input" type="text" placeholder="Company Name" style="width:100%;padding:9px 12px;border:1px solid #93c5fd;border-radius:8px;font-size:13px;box-sizing:border-box" />
+                <input id="signup-license-input" type="text" placeholder="Mandi License / GST" style="width:100%;padding:9px 12px;border:1px solid #93c5fd;border-radius:8px;font-size:13px;box-sizing:border-box" />
+              </div>
+            </div>
+          `}
+
+          <button 
+            type="button" 
+            id="btn-signup-step3-submit" 
+            style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45)"
+            ${this.isLoading ? 'disabled' : ''}
+          >
+            ${this.isLoading ? '<span class="pulse-dot"></span> Creating Account...' : '✨ Create Account & Finish →'}
+          </button>
+        </form>
+      </div>
+    `;
+  }
+
+  // Signup Step 4: Success View
+  renderSignupStep4() {
+    return `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:12px">🎉</div>
+        <h3 style="font-size:22px;font-weight:900;color:#166534;margin:0 0 8px">Account created successfully</h3>
+        <p style="font-size:14px;color:#4b5563;margin:0 0 20px">
+          Your credentials have been securely stored in MongoDB.<br/>
+          Redirecting you to the Login page...
+        </p>
+        <button 
+          type="button" 
+          id="btn-goto-login-now" 
+          style="padding:12px 28px;font-size:15px;font-weight:800;border-radius:10px;background:#15803d;color:#ffffff;border:none;cursor:pointer"
+        >
+          Go to Login Now →
+        </button>
+      </div>
+    `;
+  }
+
+  // ============================================================================
+  // 2. LOGIN VIEW (Single Field: Username OR Gmail + Password)
+  // ============================================================================
+  renderLoginView() {
+    return `
+      <div>
+        <form id="auth-unified-login-form" onsubmit="return false;">
+          <!-- Unified Username OR Gmail Field -->
+          <div style="margin-bottom:16px">
+            <label for="login-ident-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
+              Username or Gmail <span style="color:#dc2626">*</span>
+            </label>
+            <input 
+              id="login-ident-input" 
+              type="text" 
+              value="${this.loginIdentifier || ''}" 
+              placeholder="e.g. vansh123 or example@gmail.com" 
+              required 
+              style="width:100%;padding:14px 16px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+            />
+          </div>
+
+          <!-- Password Field -->
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <label for="login-pwd-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:0">
+                Password <span style="color:#dc2626">*</span>
+              </label>
+              <button 
+                type="button" 
+                id="link-forgot-password" 
+                style="background:none;border:none;color:#15803d;font-size:13px;font-weight:800;cursor:pointer;text-decoration:underline"
+              >
+                Forgot Password?
+              </button>
+            </div>
+            <div style="position:relative">
+              <input 
+                id="login-pwd-input" 
+                type="${this.showLoginPwd ? 'text' : 'password'}" 
+                placeholder="Enter your password" 
+                required 
+                style="width:100%;padding:14px 44px 14px 16px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+              />
+              <button 
+                type="button" 
+                id="btn-toggle-login-pwd" 
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:17px;color:#475569"
+              >
+                ${this.showLoginPwd ? '🙈' : '👁️'}
+              </button>
+            </div>
+          </div>
+
+          <!-- Login Submit Button -->
+          <button 
+            type="button" 
+            id="btn-submit-login" 
+            style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45);transition:transform 0.15s ease"
+            ${this.isLoading ? 'disabled' : ''}
+          >
+            ${this.isLoading ? '<span class="pulse-dot"></span> Authenticating...' : 'Login →'}
+          </button>
+
+          <!-- Don't have an account? Sign Up Link -->
+          <div style="margin-top:20px;text-align:center;font-size:14px;color:#334155;font-weight:600">
+            Don't have an account? 
+            <button type="button" id="link-switch-to-signup" style="background:none;border:none;color:#15803d;font-weight:800;cursor:pointer;text-decoration:underline;font-size:14px">
+              Sign Up
+            </button>
+          </div>
+        </form>
+
+        <!-- 1-Click Instant Demo Testing Accounts -->
+        <div style="margin-top:24px;padding:14px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center">
+          <div style="font-size:11px;font-weight:800;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.04em">
+            ⚡ Instant 1-Click Demo Accounts (Test Without Typing):
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button type="button" class="btn-demo-quick-login" data-role="farmer" style="font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;background:#ecfdf5;color:#065f46;border:1.5px solid #10b981;cursor:pointer">
+              👨‍🌾 Farmer (Ramesh)
+            </button>
+            <button type="button" class="btn-demo-quick-login" data-role="buyer" style="font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;background:#eff6ff;color:#1e40af;border:1.5px solid #3b82f6;cursor:pointer">
+              🏢 Buyer (Vikram)
+            </button>
+            <button type="button" class="btn-demo-quick-login" data-role="admin" style="font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;background:#f1f5f9;color:#0f172a;border:1.5px solid #64748b;cursor:pointer">
+              🛡️ Admin (Dr. Alok)
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ============================================================================
+  // 3. FORGOT PASSWORD STEP-BY-STEP VIEW
+  // ============================================================================
+  renderForgotView() {
+    return `
+      <div>
+        <!-- Step Progress Indicator -->
+        <div style="margin-bottom:20px;background:#f8fafc;padding:12px 16px;border-radius:12px;border:1px solid #e2e8f0">
+          <div style="font-size:12px;font-weight:800;color:#047857;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">
+            Reset Password • Step ${this.forgotStep} of 3
+          </div>
+          <div style="display:flex;gap:6px">
+            <div style="flex:1;height:6px;border-radius:3px;background:${this.forgotStep >= 1 ? '#10b981' : '#e2e8f0'}"></div>
+            <div style="flex:1;height:6px;border-radius:3px;background:${this.forgotStep >= 2 ? '#10b981' : '#e2e8f0'}"></div>
+            <div style="flex:1;height:6px;border-radius:3px;background:${this.forgotStep >= 3 ? '#10b981' : '#e2e8f0'}"></div>
+          </div>
+        </div>
+
+        ${this.forgotStep === 1 ? `
+          <form id="forgot-step1-form" onsubmit="return false;">
+            <div style="margin-bottom:18px">
+              <label for="forgot-email-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:8px;display:block">
+                Registered Gmail / Email <span style="color:#dc2626">*</span>
+              </label>
+              <input 
+                id="forgot-email-input" 
+                type="email" 
+                placeholder="example@gmail.com" 
+                value="${this.forgotEmail || ''}"
+                required 
+                style="width:100%;padding:14px 16px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+              />
+            </div>
+
+            <button 
+              type="button" 
+              id="btn-forgot-step1-submit" 
+              style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45)"
+              ${this.isLoading ? 'disabled' : ''}
+            >
+              ${this.isLoading ? '<span class="pulse-dot"></span> Sending OTP...' : 'Send Reset OTP →'}
+            </button>
+
+            <div style="margin-top:16px;text-align:center">
+              <button type="button" id="link-forgot-to-login" style="background:none;border:none;color:#64748b;font-weight:700;font-size:13px;cursor:pointer">
+                ← Back to Login
+              </button>
+            </div>
+          </form>
+        ` : ''}
+
+        ${this.forgotStep === 2 ? `
+          <div>
+            <div style="background:#f0fdf4;padding:14px 16px;border-radius:12px;border:1.5px solid #bbf7d0;text-align:center;margin-bottom:20px">
+              <div style="font-size:13px;color:#166534;font-weight:700">OTP sent to your email</div>
+              <div style="font-size:16px;font-weight:900;color:#064e3b;margin-top:2px">${this.forgotEmail}</div>
+            </div>
+
+            <form id="forgot-step2-form" onsubmit="return false;">
+              <div style="margin-bottom:20px">
+                <label for="forgot-otp-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:8px;display:block;text-align:center">
+                  Enter 6-Digit OTP
+                </label>
+                <input 
+                  id="forgot-otp-input" 
+                  type="text" 
+                  maxlength="6" 
+                  placeholder="••••••" 
+                  required 
+                  style="width:100%;padding:14px;border:2.5px solid #059669;border-radius:10px;font-size:26px;text-align:center;letter-spacing:10px;font-weight:900;color:#0f172a;background:#ffffff;box-sizing:border-box"
+                />
+              </div>
+
+              <button 
+                type="button" 
+                id="btn-forgot-step2-submit" 
+                style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45)"
+                ${this.isLoading ? 'disabled' : ''}
+              >
+                ${this.isLoading ? '<span class="pulse-dot"></span> Verifying OTP...' : 'Verify OTP →'}
+              </button>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;font-size:13px;font-weight:700">
+                <button type="button" id="btn-back-forgot-step1" style="background:none;border:none;color:#64748b;cursor:pointer">
+                  ← Change Email
+                </button>
+                <button type="button" id="btn-resend-forgot-otp" style="background:none;border:none;color:#15803d;font-weight:800;cursor:pointer" ${this.countdownSeconds > 0 ? 'disabled' : ''}>
+                  Resend OTP <span id="forgot-timer-display"></span>
+                </button>
+              </div>
+            </form>
+          </div>
+        ` : ''}
+
+        ${this.forgotStep === 3 ? `
+          <form id="forgot-step3-form" onsubmit="return false;">
+            <div style="margin-bottom:16px">
+              <label for="forgot-new-pwd-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
+                New Password (min 8) <span style="color:#dc2626">*</span>
+              </label>
+              <div style="position:relative">
+                <input 
+                  id="forgot-new-pwd-input" 
+                  type="${this.showForgotPwd ? 'text' : 'password'}" 
+                  placeholder="Enter new password" 
+                  required 
+                  style="width:100%;padding:13px 44px 13px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+                />
+                <button 
+                  type="button" 
+                  id="btn-toggle-forgot-pwd" 
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:#475569"
+                >
+                  ${this.showForgotPwd ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+
+            <div style="margin-bottom:20px">
+              <label for="forgot-confirm-pwd-input" style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:6px;display:block">
+                Confirm New Password <span style="color:#dc2626">*</span>
+              </label>
+              <input 
+                id="forgot-confirm-pwd-input" 
+                type="${this.showForgotPwd ? 'text' : 'password'}" 
+                placeholder="Re-enter new password" 
+                required 
+                style="width:100%;padding:13px 14px;border:2px solid #94a3b8;border-radius:10px;font-size:15px;font-weight:600;background:#ffffff;color:#0f172a;box-sizing:border-box"
+              />
+            </div>
+
+            <button 
+              type="button" 
+              id="btn-forgot-step3-submit" 
+              style="width:100%;padding:15px;font-size:16px;font-weight:900;border-radius:12px;background:linear-gradient(135deg, #16a34a, #15803d);color:#ffffff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px -2px rgba(22,163,74,0.45)"
+              ${this.isLoading ? 'disabled' : ''}
+            >
+              ${this.isLoading ? '<span class="pulse-dot"></span> Updating Password...' : 'Save New Password & Log In →'}
+            </button>
+          </form>
+        ` : ''}
+
+        ${this.forgotStep === 4 ? `
+          <div style="text-align:center;padding:20px 0">
+            <div style="font-size:48px;margin-bottom:12px">🔒✅</div>
+            <h3 style="font-size:22px;font-weight:900;color:#166534;margin:0 0 8px">Password reset successfully</h3>
+            <p style="font-size:14px;color:#4b5563;margin:0 0 20px">
+              Your password has been updated in MongoDB. The old password is now invalid.<br/>
+              Redirecting to login...
+            </p>
+            <button 
+              type="button" 
+              id="btn-goto-login-now-reset" 
+              style="padding:12px 28px;font-size:15px;font-weight:800;border-radius:10px;background:#15803d;color:#ffffff;border:none;cursor:pointer"
+            >
+              Login with New Password →
+            </button>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // ============================================================================
+  // EVENT BINDINGS
+  // ============================================================================
   bindEvents() {
-    // Modal Close
-    document.getElementById('modal-close')?.addEventListener('click', () => this.close());
+    // Modal close handlers
+    document.getElementById('btn-close-auth-modal')?.addEventListener('click', () => this.close());
+    document.getElementById('auth-backdrop')?.addEventListener('click', (e) => {
+      if (e.target.id === 'auth-backdrop') this.close();
+    });
 
-    // Role Tab Switching
-    document.getElementById('tab-farmer')?.addEventListener('click', () => {
-      this.activeTab = 'farmer';
-      this.step = 'email';
-      this.currentEmail = this.farmerSaved?.email || '';
+    // Header Mode Switches
+    document.getElementById('tab-toggle-login')?.addEventListener('click', () => {
+      this.modalMode = 'login';
       this.error = null;
       this.successMessage = null;
       this.render();
     });
 
-    document.getElementById('tab-admin')?.addEventListener('click', () => {
-      this.activeTab = 'admin';
-      this.step = 'email';
-      this.currentEmail = this.adminSaved?.identifier || '';
-      this.authMode = 'password';
+    document.getElementById('tab-toggle-signup')?.addEventListener('click', () => {
+      this.modalMode = 'signup';
+      this.signupStep = 1;
       this.error = null;
       this.successMessage = null;
       this.render();
     });
 
-    document.getElementById('tab-buyer')?.addEventListener('click', () => {
-      this.activeTab = 'buyer';
-      this.step = 'email';
-      this.currentEmail = this.buyerSaved?.identifier || '';
-      this.authMode = 'password';
+    // Links between modes
+    document.getElementById('link-switch-to-signup')?.addEventListener('click', () => {
+      this.modalMode = 'signup';
+      this.signupStep = 1;
+      this.error = null;
+      this.render();
+    });
+
+    document.getElementById('link-signup-to-login')?.addEventListener('click', () => {
+      this.modalMode = 'login';
+      this.error = null;
+      this.render();
+    });
+
+    document.getElementById('link-forgot-password')?.addEventListener('click', () => {
+      this.modalMode = 'forgot';
+      this.forgotStep = 1;
       this.error = null;
       this.successMessage = null;
       this.render();
     });
 
-    // Mode Switching (OTP vs Password)
-    document.getElementById('mode-pill-otp')?.addEventListener('click', () => {
-      this.authMode = 'otp';
-      this.step = 'email';
+    document.getElementById('link-forgot-to-login')?.addEventListener('click', () => {
+      this.modalMode = 'login';
       this.error = null;
       this.render();
     });
 
-    document.getElementById('mode-pill-password')?.addEventListener('click', () => {
-      this.authMode = 'password';
-      this.error = null;
+    // --- Signup Events ---
+    document.getElementById('btn-signup-step1-submit')?.addEventListener('click', () => this.handleSendSignupOtp());
+    document.getElementById('btn-signup-step2-submit')?.addEventListener('click', () => this.handleVerifySignupOtp());
+    document.getElementById('btn-back-to-step1')?.addEventListener('click', () => {
+      this.signupStep = 1;
+      this.clearIntervalTimer();
+      this.render();
+    });
+    document.getElementById('btn-resend-signup-otp')?.addEventListener('click', () => {
+      if (this.countdownSeconds <= 0) {
+        this.handleSendSignupOtp();
+      }
+    });
+
+    // Real-time username check
+    const usernameInp = document.getElementById('signup-username-input');
+    usernameInp?.addEventListener('blur', (e) => this.handleCheckUsername(e.target.value));
+
+    // Role tabs in signup
+    document.getElementById('signup-role-farmer')?.addEventListener('click', () => {
+      this.signupRole = 'farmer';
+      this.render();
+    });
+    document.getElementById('signup-role-buyer')?.addEventListener('click', () => {
+      this.signupRole = 'buyer';
       this.render();
     });
 
-    document.getElementById('btn-switch-to-pwd-mode')?.addEventListener('click', () => {
-      this.authMode = 'password';
-      this.error = null;
+    // Signup password toggle
+    document.getElementById('btn-toggle-signup-pwd')?.addEventListener('click', () => {
+      this.showSignupPwd = !this.showSignupPwd;
+      const p1 = document.getElementById('signup-pwd-input');
+      const p2 = document.getElementById('signup-confirm-pwd-input');
+      if (p1) p1.type = this.showSignupPwd ? 'text' : 'password';
+      if (p2) p2.type = this.showSignupPwd ? 'text' : 'password';
+      const btn = document.getElementById('btn-toggle-signup-pwd');
+      if (btn) btn.textContent = this.showSignupPwd ? '🙈' : '👁️';
+    });
+
+    document.getElementById('btn-signup-step3-submit')?.addEventListener('click', () => this.handleCompleteSignup());
+    document.getElementById('btn-goto-login-now')?.addEventListener('click', () => {
+      this.modalMode = 'login';
       this.render();
     });
 
-    document.getElementById('btn-switch-to-otp-mode')?.addEventListener('click', () => {
-      this.authMode = 'otp';
-      this.step = 'email';
-      this.error = null;
-      this.render();
-    });
-
-    document.getElementById('btn-switch-to-otp-reset')?.addEventListener('click', () => {
-      this.authMode = 'otp';
-      this.step = 'email';
-      this.error = null;
-      this.render();
-    });
-
-    // Password Visibility Toggles
+    // --- Login Events ---
+    document.getElementById('btn-submit-login')?.addEventListener('click', () => this.handleLogin());
     document.getElementById('btn-toggle-login-pwd')?.addEventListener('click', () => {
       this.showLoginPwd = !this.showLoginPwd;
-      const inp = document.getElementById('auth-pwd-input');
+      const inp = document.getElementById('login-pwd-input');
       if (inp) inp.type = this.showLoginPwd ? 'text' : 'password';
       const btn = document.getElementById('btn-toggle-login-pwd');
       if (btn) btn.textContent = this.showLoginPwd ? '🙈' : '👁️';
     });
 
-    document.getElementById('btn-toggle-save-pwd')?.addEventListener('click', () => {
-      this.showSavePwd = !this.showSavePwd;
-      const inp = document.getElementById('auth-save-pwd-input');
-      if (inp) inp.type = this.showSavePwd ? 'text' : 'password';
-      const btn = document.getElementById('btn-toggle-save-pwd');
-      if (btn) btn.textContent = this.showSavePwd ? '🙈' : '👁️';
+    // Allow Enter key to trigger login
+    document.getElementById('login-pwd-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.handleLogin();
+    });
+    document.getElementById('login-ident-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.handleLogin();
     });
 
-    // Form Submissions (guard against duplicate triggers)
-    document.getElementById('email-otp-send-form')?.addEventListener('submit', (e) => {
-      e?.preventDefault();
-      this.handleSendOtp();
-    });
-    document.getElementById('btn-submit-email')?.addEventListener('click', () => this.handleSendOtp());
-
-
-    document.getElementById('email-otp-verify-form')?.addEventListener('submit', (e) => {
-      e?.preventDefault();
-      this.handleVerifyOtp();
-    });
-    document.getElementById('btn-submit-otp')?.addEventListener('click', () => this.handleVerifyOtp());
-
-    document.getElementById('password-login-form')?.addEventListener('submit', (e) => {
-      e?.preventDefault();
-      this.handlePasswordLogin();
-    });
-    document.getElementById('btn-submit-pwd-login')?.addEventListener('click', () => this.handlePasswordLogin());
-
-    // Back to change email
-    document.getElementById('btn-back-email')?.addEventListener('click', () => {
-      this.step = 'email';
-      this.error = null;
+    // --- Forgot Password Events ---
+    document.getElementById('btn-forgot-step1-submit')?.addEventListener('click', () => this.handleSendResetOtp());
+    document.getElementById('btn-forgot-step2-submit')?.addEventListener('click', () => this.handleVerifyResetOtp());
+    document.getElementById('btn-back-forgot-step1')?.addEventListener('click', () => {
+      this.forgotStep = 1;
       this.clearIntervalTimer();
       this.render();
     });
-
-    // Resend OTP
-    document.getElementById('btn-resend-email-otp')?.addEventListener('click', () => {
+    document.getElementById('btn-resend-forgot-otp')?.addEventListener('click', () => {
       if (this.countdownSeconds <= 0) {
-        this.handleSendOtp(this.currentEmail);
+        this.handleSendResetOtp();
       }
     });
 
-    // 1-Click Instant Demo Button
-    document.getElementById('btn-quick-active-role')?.addEventListener('click', () => {
-      this.handleQuickDemo(this.activeTab);
+    // Forgot password toggle
+    document.getElementById('btn-toggle-forgot-pwd')?.addEventListener('click', () => {
+      this.showForgotPwd = !this.showForgotPwd;
+      const p1 = document.getElementById('forgot-new-pwd-input');
+      const p2 = document.getElementById('forgot-confirm-pwd-input');
+      if (p1) p1.type = this.showForgotPwd ? 'text' : 'password';
+      if (p2) p2.type = this.showForgotPwd ? 'text' : 'password';
+      const btn = document.getElementById('btn-toggle-forgot-pwd');
+      if (btn) btn.textContent = this.showForgotPwd ? '🙈' : '👁️';
+    });
+
+    document.getElementById('btn-forgot-step3-submit')?.addEventListener('click', () => this.handleResetPasswordSubmit());
+    document.getElementById('btn-goto-login-now-reset')?.addEventListener('click', () => {
+      this.modalMode = 'login';
+      this.render();
+    });
+
+    // 1-Click Instant Demo Login buttons
+    document.querySelectorAll('.btn-demo-quick-login').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const role = btn.getAttribute('data-role');
+        if (role) this.handleQuickDemo(role);
+      });
     });
   }
 }
